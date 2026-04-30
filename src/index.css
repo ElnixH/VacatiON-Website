@@ -1,0 +1,11 @@
+/* src/index.css */
+@font-face {
+  font-family: 'MarschelPrinted';
+  src: url('./assets/fonts/marschel-printed.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
