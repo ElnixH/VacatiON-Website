@@ -91,7 +91,7 @@ export default function LegalNotice({ setView }) {
               4. Copyright & Trademarks
             </h2>
             <p>
-              All content on this website, including text, photographs, graphics, and design elements, is the exclusive property of VacatiON and THEODORA LEKASI PC unless otherwise stated. Unauthorized reproduction, distribution, or use of this material without prior written consent is strictly prohibited.
+              All content on this website, including text, photographs, graphics, and design elements, is the exclusive property of Vacation and THEODORA LEKASI PC unless otherwise stated. Unauthorized reproduction, distribution, or use of this material without prior written consent is strictly prohibited.
             </p>
           </div>
 

@@ -7,7 +7,7 @@ const leftLinks = [
 ];
 
 const rightLinks = [
-  { label: "ANDREA'S HOUSE", view: 'andreas-house' },
+  { label: "ANDREA'S TINOS HOUSE", view: 'andreas-house' },
   { label: 'VILLA LEONORA', view: 'villa-leonora' },
 ];
 
@@ -71,7 +71,7 @@ export default function Nav({ scrolled, setView }) {
               className={`font-display text-[12px] tracking-[0.4em] uppercase transition-all duration-500 text-[#A18E7E] whitespace-nowrap absolute
                 ${scrolled ? 'opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-105' : 'opacity-0 pointer-events-none'}`}
             >
-              Turn your memories on.
+              Turn your memories on
             </span>
           </div>
 

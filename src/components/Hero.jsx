@@ -1,9 +1,4 @@
 export default function Hero() {
-  const scrollToCollection = () => {
-    const element = document.getElementById('collection');
-    element?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
     <section id="home" className="relative h-screen w-full overflow-hidden flex items-center justify-center">
       
@@ -39,19 +34,6 @@ export default function Hero() {
           like it’s yours alone.
         </h1>
       </div>
-
-      {/* scroll indicator */}
-      <button 
-        onClick={scrollToCollection}
-        className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-4 group cursor-pointer"
-      >
-        <span className="font-body text-[9px] tracking-[0.4em] text-white/70 uppercase group-hover:text-white transition-colors duration-300">
-          Scroll
-        </span>
-        <div className="w-[1px] h-12 bg-white/20 overflow-hidden relative">
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-white transform -translate-y-full group-hover:translate-y-[200%] transition-transform duration-1000 ease-in-out" />
-        </div>
-      </button>
 
       {/* fade to next section */}
       <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent opacity-10 pointer-events-none" />

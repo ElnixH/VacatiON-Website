@@ -37,7 +37,7 @@ export default function AboutUs({ setView }) {
         
         <div className="text-center mb-24">
           <h1 className="font-display text-2xl md:text-4xl tracking-[0.4em] text-[#191D30] uppercase mb-8">
-            About VacatiON
+            About Vacation
           </h1>
           <div className="w-12 h-[1px] bg-[#A18E7E] mx-auto mb-8" />
           <p className="font-body text-[11px] tracking-[0.2em] text-[#191D30]/50 uppercase">
@@ -51,7 +51,7 @@ export default function AboutUs({ setView }) {
           </h2>
           <div className="font-body font-light text-[14px] leading-[2.2] text-[#191D30]/80 space-y-6">
             <p>
-              [We need to write your brand story here. This is where we talk about the vision behind VacatiON, the architecture, the feeling of the sunsets, and the high-end hospitality experience you are creating in Albania and Greece.]
+              [We need to write your brand story here. This is where we talk about the vision behind Vacation, the architecture, the feeling of the sunsets, and the high-end hospitality experience you are creating in Albania and Greece.]
             </p>
             <p>
               [We can discuss the dedication to slow luxury, natural textures, and timeless details that make every guest feel like the space is theirs alone.]
@@ -82,7 +82,7 @@ export default function AboutUs({ setView }) {
             <div>
               <h3 className="font-medium uppercase tracking-wider text-[11px] mb-4 text-[#A18E7E]">Data & Privacy</h3>
               <p className="mb-6">
-                VacatiON respects your privacy and complies with European data protection regulations (GDPR). We collect specific data necessary to process your reservations and enhance your digital experience.
+                Vacation respects your privacy and complies with European data protection regulations (GDPR). We collect specific data necessary to process your reservations and enhance your digital experience.
               </p>
               
               <div className="space-y-4">

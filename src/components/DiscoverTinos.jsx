@@ -66,7 +66,7 @@ export default function DiscoverTinos({ setView }) {
               <div className="mt-16 text-center">
                 <div className="w-12 h-[1px] bg-[#A18E7E]/40 mx-auto mb-4" />
                 <span className="font-display italic text-[18px] text-[#191D30]/60">
-                  VacatiON
+                  Vacation
                 </span>
               </div>
 
@@ -126,14 +126,15 @@ export default function DiscoverTinos({ setView }) {
           </div>
         </div>
         <div className="aspect-[3/4] bg-[#191D30]/5">
-           <img src="/tinos2.webp" alt="Tinos details" className="w-full h-full object-cover grayscale opacity-80 hover:grayscale-0 transition-all duration-700"/>
+           {/* Classes updated here: removed grayscale, hover, and transition classes */}
+           <img src="/tinos2.webp" alt="Tinos details" className="w-full h-full object-cover opacity-80" />
         </div>
       </section>
 
       {/* Villages grid */}
       <section className="py-24 px-6 md:px-12 max-w-[1440px] mx-auto">
         <h2 className="font-display text-[18px] tracking-[0.3em] text-[#191D30] uppercase mb-12 text-center">
-          Famous Villages
+          PICTURESQUE VILLAGES
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
@@ -141,7 +142,7 @@ export default function DiscoverTinos({ setView }) {
             className="group cursor-pointer"
             onClick={() => setSelectedLocation({
               name: 'Pyrgos',
-              subtitle: 'The Marble Heart',
+              subtitle: 'The Marble Art',
               info: 'The cultural center of marble art in Greece. Wander through streets where every facade, fountain, and doorway is intricately sculpted by generations of master craftsmen.',
               moreInfo: 'It is the birthplace of legend Giannoulis Halepas. Spend your afternoon beneath the ancient plane tree in the main square, savoring traditional galaktoboureko as the marble glows in the fading light.'
             })}

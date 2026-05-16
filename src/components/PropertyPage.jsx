@@ -16,9 +16,9 @@ export default function PropertyPage({ view, setView }) {
 
   const properties = {
     'andreas-house': {
-      name: "Andrea's House",
+      name: "ANDREA'S TINOS HOUSE",
       subtitle: "A Traditional Cycladic Haven",
-      description: "Nestled in the authentic heart of Tinos, Andrea's House is a beautifully restored sanctuary that perfectly balances ancient Cycladic architecture with refined, modern luxury. Experience the absolute serenity of island living, surrounded by history and elegance.",
+      description: "Nestled in the authentic heart of Tinos, ANDREA'S TINOS HOUSE is a beautifully restored sanctuary that perfectly balances ancient Cycladic architecture with refined, modern luxury. Experience the absolute serenity of island living, surrounded by history and elegance.",
       bookingLink: "https://www.booking.com/hotel/gr/andrea-39-s-tinos-house.en-gb.html?aid=898224&app_hotel_id=1487398&checkin=2026-05-09&checkout=2026-05-22&from_sn=ios&group_adults=2&group_children=0&label=hotel_details-0M51VjQ%401777533327&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA%2C",
       gallery: [
         "/andreas-house/image00006 (1).webp", 
@@ -118,15 +118,19 @@ export default function PropertyPage({ view, setView }) {
                 <div className="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                   <button 
                     onClick={prevImage}
-                    className="p-3 bg-white/70 backdrop-blur-md rounded-full text-[#191D30] hover:bg-white transition-all hover:scale-110 active:scale-95 shadow-lg"
+                    /* Changed p-3 to p-2 (smaller), bg-white/30 to bg-white/10 (more transparent), hover:bg-white/70 to hover:bg-white/30 (less opaque on hover), and shadow-lg to shadow-md */
+                    className="p-2 bg-white/10 backdrop-blur-sm rounded-full text-[#191D30] hover:bg-white/30 transition-all hover:scale-110 active:scale-95 shadow-md"
                   >
-                    <ChevronLeft size={24} strokeWidth={1.5} />
+                    {/* Changed size from 24 to 18 (smaller icon) */}
+                    <ChevronLeft size={18} strokeWidth={1.5} />
                   </button>
                   <button 
                     onClick={nextImage}
-                    className="p-3 bg-white/70 backdrop-blur-md rounded-full text-[#191D30] hover:bg-white transition-all hover:scale-110 active:scale-95 shadow-lg"
+                    /* Changed p-3 to p-2 (smaller), bg-white/30 to bg-white/10 (more transparent), hover:bg-white/70 to hover:bg-white/30 (less opaque on hover), and shadow-lg to shadow-md */
+                    className="p-2 bg-white/10 backdrop-blur-sm rounded-full text-[#191D30] hover:bg-white/30 transition-all hover:scale-110 active:scale-95 shadow-md"
                   >
-                    <ChevronRight size={24} strokeWidth={1.5} />
+                    {/* Changed size from 24 to 18 (smaller icon) */}
+                    <ChevronRight size={18} strokeWidth={1.5} />
                   </button>
                 </div>
 

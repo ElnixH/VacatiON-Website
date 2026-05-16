@@ -6,7 +6,7 @@ export default function Reviews() {
       name: 'James Mitchell',
       title: 'Architectural Consultant',
       rating: 5,
-      text: 'Living at VacatiON has been an absolute game-changer. The silent luxury, the community, and the architectural design are unparalleled.',
+      text: 'Living at Vacation has been an absolute game-changer. The silent luxury, the community, and the architectural design are unparalleled.',
       avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&dpr=2',
     },
     {
@@ -20,7 +20,7 @@ export default function Reviews() {
       name: 'David Chen',
       title: 'Technology Director',
       rating: 5,
-      text: 'VacatiON offers the perfect blend of silence, convenience, and modern aesthetic. Highly recommended for the discerning resident.',
+      text: 'Vacation offers the perfect blend of silence, convenience, and modern aesthetic. Highly recommended for the discerning resident.',
       avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&dpr=2',
     },
   ];
@@ -36,7 +36,7 @@ export default function Reviews() {
           </h2>
           <div className="w-12 h-[1px] bg-[#A18E7E] mx-auto mb-6" />
           <p className="font-body font-light text-[11px] tracking-[0.2em] text-[#A18E7E] uppercase">
-            Voices from our community
+            
           </p>
         </div>
 

@@ -4,7 +4,7 @@ export default function Collection({ setView }) {
   const properties = [
     {
       id: 'andreas-house',
-      name: "Andrea's House",
+      name: "Andrea's Tinos House",
       image: '/andreas-house/image00006 (1).webp', 
     },
     {

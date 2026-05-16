@@ -28,7 +28,7 @@ export default function QuoteHero({ setView }) {
           Why Tinos?
         </h2>
         <p className="font-body text-[11px] tracking-[0.4em] text-white/80 uppercase mb-12">
-          The true heart of the Cyclades
+          AUTHENTIC CYCLADIC EXPERIENCE
         </p>
 
         {/* THE BUTTON */}

@@ -31,7 +31,7 @@ export default function About({ setView }) {
             
             <div className="font-body font-light text-[13px] md:text-[14px] leading-[2.2] text-[#191D30]/80 mb-12 space-y-6 max-w-lg">
               <p>
-                VacatiON is more than a destination; it is a curated state of being. We believe that true luxury is found in the silent intervals—the play of light on a marble wall, the texture of hand-loomed linen, and the absolute privacy of a space designed just for you.
+                Vacation is more than a destination; it is a curated state of being. We believe that true luxury is found in the silent intervals—the play of light on a marble wall, the texture of hand-loomed linen, and the absolute privacy of a space designed just for you.
               </p>
               <p>
                 Every element of our collection is chosen to facilitate a deeper connection to the landscape and a total restoration of the self. This is where modern design meets the ancient soul of the Aegean.

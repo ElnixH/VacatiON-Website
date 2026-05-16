@@ -31,7 +31,7 @@ export default function ContactUs({ setView }) {
           </h1>
           <div className="w-12 h-[1px] bg-[#A18E7E] mx-auto mb-8" />
           <p className="font-body text-[11px] tracking-[0.2em] text-[#191D30]/50 uppercase">
-            We are at your service
+            
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export default function ContactUs({ setView }) {
             <div className="space-y-10">
               <div>
                 <h3 className="font-display text-[11px] tracking-[0.2em] text-[#A18E7E] uppercase mb-2">
-                  General Inquiries
+                  ENQUIRIES
                 </h3>
                 <a href="mailto:info@vacationofficial.com" className="block font-body font-light text-[13px] tracking-widest text-[#191D30] hover:text-[#A18E7E] transition-colors lowercase">
                   info@vacationofficial.com

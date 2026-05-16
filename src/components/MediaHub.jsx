@@ -72,7 +72,7 @@ export default function MediaHub({ setView }) {
           </h1>
           <div className="w-12 h-[1px] bg-[#A18E7E] mx-auto mb-8" />
           <p className="font-body text-[11px] tracking-[0.2em] text-[#191D30]/50 uppercase">
-            The VacatiON Visual Archives
+            The Vacation Visual Archives
           </p>
         </div>
 

@@ -104,7 +104,7 @@ export default function Footer({ setView }) {
 
         <div className="text-center flex justify-center">
           <p className="font-body text-[11px] tracking-[0.2em] text-[#191D30]/50">
-            © VacatiON 2026
+            © Vacation 2026
           </p>
         </div>
 

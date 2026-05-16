@@ -43,10 +43,10 @@ export default function CookiesPolicy({ setView }) {
             </h2>
             <div className="space-y-4">
               <p>
-                At VacatiON, we use cookies to make your experience on our site better. The use of cookies helps us improve the site's functions, to make your browsing easier, and to assist you in your selections. Thus, we are able to provide you with personalised content and advertisements that are based on your interests and needs. In addition, cookies are used so that we can analyse our site's traffic and detect problematic pages that need improvement. Our goal is to improve our site in order to provide a continuously improved experience and services during visits by our users.
+                At Vacation, we use cookies to make your experience on our site better. The use of cookies helps us improve the site's functions, to make your browsing easier, and to assist you in your selections. Thus, we are able to provide you with personalised content and advertisements that are based on your interests and needs. In addition, cookies are used so that we can analyse our site's traffic and detect problematic pages that need improvement. Our goal is to improve our site in order to provide a continuously improved experience and services during visits by our users.
               </p>
               <p>
-                At VacatiON, the primary goal is to protect the privacy of visitors to the website and, for this reason, the organisation adheres to a strict policy.
+                At Vacation, the primary goal is to protect the privacy of visitors to the website and, for this reason, the organisation adheres to a strict policy.
               </p>
               <p>
                 We recommend that you spend a little time to read this policy, so that you can understand the type of cookies we use, the information we collect through the use of cookies, and how this information is utilised. By using our website, you agree to the use of cookies in accordance with this policy.
