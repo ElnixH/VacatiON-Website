@@ -53,7 +53,7 @@ export default function LegalNotice({ setView }) {
               <li><strong>Legal Form:</strong> Private Company (I.K.E. equivalent)</li>
               <li><strong>Registered Office:</strong> Tinos, Cyclades, Hellenic Republic</li>
               <li><strong>G.E.MI. Number:</strong> 192807138000</li>
-              <li><strong>VAT Number (AFM):</strong> [Pending / Available Upon Request]</li>
+              <li><strong>VAT Number (AFM):</strong> 803239089</li>
             </ul>
           </div>
 

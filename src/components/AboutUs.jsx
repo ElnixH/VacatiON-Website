@@ -73,7 +73,7 @@ export default function AboutUs({ setView }) {
                 <li><strong>Legal Form:</strong> Private Company (I.K.E. equivalent)</li>
                 <li><strong>Registered Office:</strong> Tinos, Cyclades, Hellenic Republic</li>
                 <li><strong>G.E.MI. Number:</strong> 192807138000</li>
-                <li><strong>VAT Number (AFM):</strong> [Please Provide]</li> 
+                <li><strong>VAT Number (AFM):</strong> 803239089</li> 
                 <li><strong>Contact Email:</strong> <a href="mailto:info@vacationofficial.com" className="text-[#A18E7E] hover:text-[#191D30] transition-colors">info@vacationofficial.com</a></li>
                 <li><strong>Manager/Representative:</strong> Theodora Lekasi</li>
               </ul>
