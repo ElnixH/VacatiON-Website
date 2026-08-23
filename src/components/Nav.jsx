@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 
 const leftLinks = [
   { label: 'DISCOVER TINOS', view: 'discover-tinos' },
@@ -8,21 +8,31 @@ const leftLinks = [
 
 const rightLinks = [
   { 
-    label: "ANDREA'S TINOS HOUSE", 
-    view: 'andreas-house',
-    subtitle: 'Tradition Refined' // Added for mobile display
+    label: "ANDREA'S HOUSE", 
+    isDropdown: true,
+    items: [
+      { 
+        label: "Traditional House", 
+        view: 'andreas-traditional',
+        subtitle: 'Tradition Refined' 
+      },
+      { 
+        label: "Two-Bedroom House", 
+        view: 'andreas-two-bed',
+        subtitle: 'Spacious Elegance' 
+      }
+    ]
   },
   { 
     label: 'VILLA LEONORA', 
     view: 'villa-leonora',
-    subtitle: 'Coastal Luxury' // Added for mobile display
+    subtitle: 'Coastal Luxury' 
   },
 ];
 
 export default function Nav({ scrolled, setView }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // handle routing
   const handleNavigation = (viewName) => {
     setIsOpen(false);
     if (setView) {
@@ -40,18 +50,17 @@ export default function Nav({ scrolled, setView }) {
     }
   };
 
-  // UPDATED: Changed base padding from py-8 to py-6 to reduce height slightly.
   const headerStyle = `fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
     scrolled || isOpen ? 'bg-[#191D30]/95 shadow-2xl py-3' : 'bg-transparent py-6'
   }`;
 
-  const linkStyle = `group relative text-[11px] font-body font-light tracking-[0.3em] transition-all duration-500 uppercase text-white hover:text-[#A18E7E] py-2 flex items-center justify-center`;
+  const linkStyle = `group relative text-[11px] font-body font-light tracking-[0.3em] transition-all duration-500 uppercase text-white hover:text-[#A18E7E] py-2 flex items-center justify-center cursor-pointer`;
 
   return (
     <header className={headerStyle}>
       <div className="w-full px-4 md:px-8 h-12 flex items-center relative">
         
-        {/* Desktop Nav - UNTOUCHED */}
+        {/* Desktop Nav */}
         <div className="hidden md:flex w-full items-center justify-between">
           
           <nav className="flex flex-1 justify-start gap-12">
@@ -84,19 +93,48 @@ export default function Nav({ scrolled, setView }) {
             </span>
           </div>
 
-          <nav className="flex flex-1 justify-end items-center gap-12">
+          <nav className="flex flex-1 justify-end items-center gap-6 lg:gap-12">
             {rightLinks.map((link, index) => (
-              <button key={`${link.view}-${index}`} onClick={() => handleNavigation(link.view)} className={linkStyle}>
-                <span className="relative">
-                  {link.label}
-                  <span className="absolute -bottom-2 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-150 ease-out group-active:w-full" />
-                </span>
-              </button>
+              link.isDropdown ? (
+                // DESKTOP DROPDOWN MENU
+                <div key={index} className="relative group">
+                  <div className={`${linkStyle} flex items-center gap-1`}>
+                    <span className="relative pb-1">
+                      {link.label}
+                      <span className="absolute bottom-0 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-300 ease-out group-hover:w-full" />
+                    </span>
+                    <ChevronDown size={12} className="text-white/70 group-hover:text-[#A18E7E] transition-colors duration-300" />
+                  </div>
+                  
+                  {/* Dropdown Box - FIXED to be completely transparent */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 opacity-0 translate-y-2 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-500 z-50">
+                    <div className="bg-transparent p-5 flex flex-col gap-5 min-w-[220px] items-center">
+                      {link.items.map((subItem) => (
+                        <button
+                          key={subItem.view}
+                          onClick={() => handleNavigation(subItem.view)}
+                          className="text-[10px] font-body tracking-[0.2em] text-white/70 hover:text-[#A18E7E] uppercase text-center transition-colors w-full"
+                        >
+                          {subItem.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // STANDARD LINK
+                <button key={`${link.view}-${index}`} onClick={() => handleNavigation(link.view)} className={linkStyle}>
+                  <span className="relative">
+                    {link.label}
+                    <span className="absolute -bottom-2 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-150 ease-out group-active:w-full" />
+                  </span>
+                </button>
+              )
             ))}
           </nav>
         </div>
 
-        {/* Mobile Nav Toggle Top Bar - Keep centered logo logic */}
+        {/* Mobile Nav Toggle Top Bar */}
         <div className="flex md:hidden w-full items-center justify-between relative">
           
           {/* Logo / Brand (Mobile Top Bar) */}
@@ -118,7 +156,7 @@ export default function Nav({ scrolled, setView }) {
             </span>
           </div>
           
-          {/* Menu Toggle - pushed to right */}
+          {/* Menu Toggle */}
           <div className="ml-auto">
             <button onClick={() => setIsOpen(!isOpen)} className="text-white p-2">
               {isOpen ? <X size={24} strokeWidth={1} /> : <Menu size={24} strokeWidth={1} />}
@@ -127,7 +165,7 @@ export default function Nav({ scrolled, setView }) {
         </div>
       </div>
 
-      {/* Mobile Menu Overlay - CENTURED & RESTRUCTURED */}
+      {/* Mobile Menu Overlay */}
       <div className={`md:hidden absolute top-0 left-0 w-full h-screen bg-[#191D30] transition-all duration-500 overflow-y-auto px-6 ${isOpen ? 'translate-y-0 shadow-2xl' : '-translate-y-full'}`}>
         
         {/* Mobile Menu Header */}
@@ -161,32 +199,58 @@ export default function Nav({ scrolled, setView }) {
             {/* Centered Decorative Divider */}
             <div className="w-12 h-[1px] bg-[#A18E7E]/50 mx-auto"></div>
 
-            {/* 2. OUR PROPERTIES SECTION (Centered and Featured) */}
-            <div className="flex flex-col items-center gap-12">
-                <h3 className="text-[#A18E7E] font-display text-[11px] tracking-[0.3em] uppercase mb-2">
+            {/* 2. OUR PROPERTIES SECTION */}
+            <div className="flex flex-col items-center gap-12 w-full">
+                <h3 className="text-[#A18E7E] font-display text-[11px] tracking-[0.3em] uppercase mb-4">
                     Our Properties
                 </h3>
 
-                <div className="flex flex-col gap-10">
-                    {rightLinks.map((link) => (
-                        <button 
-                          key={link.view} 
-                          onClick={() => handleNavigation(link.view)} 
-                          className="flex flex-col items-center gap-1.5 group"
-                        >
-                            <span className="text-white font-body text-2xl font-light tracking-[0.05em] uppercase transition-colors group-hover:text-[#A18E7E]">
-                                {link.label}
-                            </span>
-                            <span className="text-[#A18E7E] font-body italic text-[13px] tracking-wide opacity-80">
-                                ~ {link.subtitle} ~
-                            </span>
-                        </button>
+                <div className="flex flex-col gap-14 w-full">
+                    {rightLinks.map((link, index) => (
+                        link.isDropdown ? (
+                            // MOBILE: Grouping Andrea's properties together
+                            <div key={index} className="flex flex-col items-center gap-8 w-full">
+                                <span className="text-white/40 font-display text-[12px] tracking-[0.4em] uppercase border-b border-white/10 pb-3 w-[200px]">
+                                    {link.label}
+                                </span>
+                                <div className="flex flex-col gap-8">
+                                    {link.items.map((subItem) => (
+                                        <button 
+                                          key={subItem.view} 
+                                          onClick={() => handleNavigation(subItem.view)} 
+                                          className="flex flex-col items-center gap-1.5 group"
+                                        >
+                                            <span className="text-white font-body text-xl font-light tracking-[0.05em] uppercase transition-colors group-hover:text-[#A18E7E]">
+                                                {subItem.label}
+                                            </span>
+                                            <span className="text-[#A18E7E] font-body italic text-[12px] tracking-wide opacity-80">
+                                                ~ {subItem.subtitle} ~
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            // MOBILE: Standard standalone property
+                            <button 
+                              key={link.view} 
+                              onClick={() => handleNavigation(link.view)} 
+                              className="flex flex-col items-center gap-1.5 group mt-2"
+                            >
+                                <span className="text-white font-body text-2xl font-light tracking-[0.05em] uppercase transition-colors group-hover:text-[#A18E7E]">
+                                    {link.label}
+                                </span>
+                                <span className="text-[#A18E7E] font-body italic text-[13px] tracking-wide opacity-80">
+                                    ~ {link.subtitle} ~
+                                </span>
+                            </button>
+                        )
                     ))}
                 </div>
             </div>
 
             {/* Closing Tagline */}
-            <p className="font-display italic text-[#A18E7E]/60 text-base pt-16">
+            <p className="font-display italic text-[#A18E7E]/60 text-base pt-12">
               Turn your memories on
             </p>
 

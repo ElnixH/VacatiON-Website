@@ -1,5 +1,3 @@
-// Cleaned and improved phone input styling + connected country prefix with number input
-
 import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import PhoneInput from 'react-phone-input-2';
@@ -9,7 +7,6 @@ export default function ContactUs({ setView }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  // The state that holds standard dropdown value (defaulting to 'reservation')
   const [subject, setSubject] = useState('reservation');
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('');
@@ -24,7 +21,6 @@ export default function ContactUs({ setView }) {
 
     setStatus('Sending...');
 
-    // The subject state here contains standard current selection from standard dropdown
     const formData = {
       name,
       email,
@@ -48,7 +44,7 @@ export default function ContactUs({ setView }) {
         setName('');
         setEmail('');
         setPhone('');
-        setSubject('reservation'); // Resets to default after success
+        setSubject('reservation'); 
         setMessage('');
       } else {
         setStatus('Something went wrong. Please try again.');
@@ -109,16 +105,31 @@ export default function ContactUs({ setView }) {
             </div>
 
             <div>
-              <h3 className="font-display text-[11px] tracking-[0.2em] text-[#A18E7E] uppercase mb-2">
+              <h3 className="font-display text-[11px] tracking-[0.2em] text-[#A18E7E] uppercase mb-4">
                 Enquiries
               </h3>
 
-              <a
-                href="mailto:info@vacationofficial.com"
-                className="font-body text-[13px] tracking-widest text-[#191D30] hover:text-[#A18E7E] transition-colors lowercase"
-              >
-                info@vacationofficial.com
-              </a>
+              {/* FIXED: Added Email and Phone Numbers in a column layout */}
+              <div className="flex flex-col space-y-3">
+                <a
+                  href="mailto:info@vacationofficial.com"
+                  className="font-body text-[13px] tracking-widest text-[#191D30] hover:text-[#A18E7E] transition-colors lowercase"
+                >
+                  info@vacationofficial.com
+                </a>
+                <a
+                  href="tel:+306973952375"
+                  className="font-body text-[13px] tracking-widest text-[#191D30] hover:text-[#A18E7E] transition-colors"
+                >
+                  00 30 697 3952375
+                </a>
+                <a
+                  href="tel:+447703341841"
+                  className="font-body text-[13px] tracking-widest text-[#191D30] hover:text-[#A18E7E] transition-colors"
+                >
+                  00 44 770 3341841
+                </a>
+              </div>
             </div>
 
           </div>
@@ -131,7 +142,6 @@ export default function ContactUs({ setView }) {
 
             <form className="space-y-10" onSubmit={handleSubmit}>
 
-              {/* Name */}
               <div className="relative">
                 <input
                   type="text"
@@ -147,7 +157,6 @@ export default function ContactUs({ setView }) {
                 </label>
               </div>
 
-              {/* Email */}
               <div className="relative">
                 <input
                   type="email"
@@ -163,7 +172,6 @@ export default function ContactUs({ setView }) {
                 </label>
               </div>
 
-              {/* Phone Input */}
               <div>
                 <label className="block mb-3 text-[9px] tracking-[0.2em] uppercase text-[#191D30]/50">
                   Phone Number
@@ -185,11 +193,10 @@ export default function ContactUs({ setView }) {
                 />
               </div>
 
-              {/* Subject Dropdown */}
               <div className="relative">
                 <select
-                  value={subject} // Listens to the state
-                  onChange={(e) => setSubject(e.target.value)} // Updates the state
+                  value={subject} 
+                  onChange={(e) => setSubject(e.target.value)} 
                   className="w-full bg-transparent border-b border-[#191D30]/20 py-3 text-[13px] uppercase tracking-wider text-[#191D30] focus:outline-none focus:border-[#A18E7E]"
                 >
                   <option value="reservation">Reservation Inquiry</option>
@@ -203,7 +210,6 @@ export default function ContactUs({ setView }) {
                 </div>
               </div>
 
-              {/* Message */}
               <div className="relative">
                 <textarea
                   rows="4"
@@ -219,7 +225,6 @@ export default function ContactUs({ setView }) {
                 </label>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 className="w-full mt-8 px-10 py-5 bg-[#191D30] text-white text-[10px] tracking-[0.3em] uppercase hover:bg-[#A18E7E] transition-colors duration-300"

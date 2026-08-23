@@ -1,11 +1,17 @@
 export default function Collection({ setView }) {
   
-  // Property catalog data
+  // Property catalog data updated to reflect the 3 distinct properties
   const properties = [
     {
-      id: 'andreas-house',
-      name: "Andrea's Tinos House",
+      id: 'andreas-traditional',
+      name: "Andrea's Traditional",
       image: '/andreas-house/image00006 (1).webp', 
+    },
+    {
+      id: 'andreas-two-bed',
+      name: "Andrea's Two-Bedroom",
+      // FIXED: Updated to your newly requested cover image
+      image: '/andreas-house-two-bedroom/image00027 (1).webp', 
     },
     {
       id: 'villa-leonora',
@@ -23,8 +29,8 @@ export default function Collection({ setView }) {
 
   return (
     <section id="collection" className="py-32 bg-white">
-      {/* Container max-width adjusted for 2-column balance */}
-      <div className="max-w-[1000px] mx-auto px-6 md:px-12">
+      {/* Container max-width increased slightly to perfectly fit 3 columns */}
+      <div className="max-w-[1200px] mx-auto px-6 md:px-12">
         
         {/* Section header */}
         <div className="flex flex-col items-center text-center mb-24">
@@ -34,8 +40,8 @@ export default function Collection({ setView }) {
           <div className="w-14 h-[1px] bg-[#A18E7E]" />
         </div>
 
-        {/* Property Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+        {/* Property Grid - Changed to md:grid-cols-3 so all three fit on one row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
           {properties.map((item) => (
             <button
               key={item.id}
