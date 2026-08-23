@@ -20,19 +20,18 @@ export default function EarlyBirdPopup({ setView }) {
       
       <div className="flex items-center gap-3 mb-4 text-[#A18E7E]">
         <Calendar size={24} strokeWidth={1.5} />
-        {/* FIXED: Changed title and added font-bold */}
         <h3 className="font-display font-bold text-lg tracking-widest uppercase text-[#191D30]">
           EARLY BIRD 2027
         </h3>
       </div>
       
-      {/* FIXED: Added new text with a stylish sub-heading layout */}
       <div className="mb-6">
         <p className="font-body text-[15px] font-medium text-[#191D30] mb-2">
           Your Tinos Escape Starts Here
         </p>
+        {/* FIXED: Updated text to be inclusive of all properties */}
         <p className="font-body text-sm leading-relaxed text-[#191D30]/70">
-          Book your stay at Villa Leonora for 2027 and enjoy our exclusive Early Bird offer.
+          Book your stay for 2027 and enjoy our exclusive Early Bird offers.
         </p>
       </div>
       
