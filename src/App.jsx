@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import Nav from './components/Nav';
 import Hero from './components/Hero';
 import Collection from './components/collection'; 
@@ -116,6 +117,7 @@ function App() {
 
       <Footer setView={setView} />
       
+      <Analytics />
     </div>
   );
 }
