@@ -1,187 +1,250 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  MapPin,
+  Star,
+} from 'lucide-react';
+import { PROPERTIES } from '../data/siteData';
+import SmoothImage from './SmoothImage';
 
 export default function PropertyPage({ view, setView }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(null);
 
-  const goHome = () => {
-    setIsLoaded(false);
-    setTimeout(() => {
-      setView('home');
-      window.history.pushState(null, '', '/');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 300);
-  };
-
-  const properties = {
-    'andreas-house': {
-      name: "ANDREA'S TINOS HOUSE",
-      subtitle: "A Traditional Cycladic Haven",
-      description: "Nestled in the authentic heart of Tinos, ANDREA'S TINOS HOUSE is a beautifully restored sanctuary that perfectly balances ancient Cycladic architecture with refined, modern luxury. Experience the absolute serenity of island living, surrounded by history and elegance.",
-      bookingLink: "https://www.booking.com/hotel/gr/andrea-39-s-tinos-house.en-gb.html?aid=898224&app_hotel_id=1487398&checkin=2026-05-09&checkout=2026-05-22&from_sn=ios&group_adults=2&group_children=0&label=hotel_details-0M51VjQ%401777533327&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA%2C",
-      gallery: [
-        "/andreas-house/image00006 (1).webp", 
-        "/andreas-house/image00001 (1).webp", "/andreas-house/image00002 (1).webp", 
-        "/andreas-house/image00003 (1).webp", "/andreas-house/image00004 (1).webp", 
-        "/andreas-house/image00005 (1).webp", "/andreas-house/image00007 (1).webp", 
-        "/andreas-house/image00008 (1).webp", "/andreas-house/image00009 (1).webp", 
-        "/andreas-house/image00010 (1).webp", "/andreas-house/image00011 (1).webp", 
-        "/andreas-house/image00012 (1).webp", "/andreas-house/image00013 (1).webp", 
-        "/andreas-house/image00014 (1).webp", "/andreas-house/image00015 (2).webp", 
-        "/andreas-house/image00016 (1).webp", "/andreas-house/image00017 (1).webp", 
-        "/andreas-house/image00018.webp", "/andreas-house/image00019.webp", 
-        "/andreas-house/image00020.webp", "/andreas-house/image00021.webp", 
-        "/andreas-house/image00022.webp", "/andreas-house/image00023.webp", 
-        "/andreas-house/image00024.webp", "/andreas-house/image00025.webp", 
-        "/andreas-house/image00026.webp", "/andreas-house/image00027.webp", 
-        "/andreas-house/image00028.webp", "/andreas-house/image00029.webp", 
-        "/andreas-house/image00030.webp"
-      ]
-    },
-    'villa-leonora': {
-      name: "Villa Leonora",
-      subtitle: "The Ultimate Coastal Retreat",
-      description: "Villa Leonora offers an unparalleled experience of the Aegean. Designed for those who seek absolute privacy and breathtaking views, this spectacular villa provides a seamless indoor-outdoor living experience, bathed in the famous Grecian light.",
-      bookingLink: "https://www.booking.com/hotel/gr/villa-leonora-tinos.en-gb.html?aid=898224&app_hotel_id=7701258&checkin=2026-05-14&checkout=2026-05-15&from_sn=ios&group_adults=2&group_children=0&label=hotel_details-KNEigd4%401777400372&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA%2C",
-      gallery: [
-        "/image00016.webp", 
-        "/image00001.webp", "/image00002.webp", "/image00003.webp",
-        "/image00004.webp", "/image00005.webp", "/image00006.webp",
-        "/image00007.webp", "/image00008.webp", "/image00009.webp",
-        "/image00010.webp", "/image00011.webp", "/image00012.webp",
-        "/image00013.webp", "/image00014.webp", "/image00015.webp",
-        "/image00017.webp"
-      ]
-    }
-  };
-
-  const property = properties[view];
+  const property = PROPERTIES[view];
 
   useEffect(() => {
     setCurrentImageIndex(0);
-    const timer = setTimeout(() => setIsLoaded(true), 100); 
+    const timer = setTimeout(() => setIsLoaded(true), 80);
     return () => clearTimeout(timer);
   }, [view]);
 
+  // Preload adjacent gallery images for instant transitions
+  useEffect(() => {
+    if (!property?.gallery?.length) return;
+    const total = property.gallery.length;
+    const nextIdx = (currentImageIndex + 1) % total;
+    const prevIdx = (currentImageIndex - 1 + total) % total;
+    [property.gallery[nextIdx], property.gallery[prevIdx]].forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [currentImageIndex, property]);
+
   if (!property) return null;
 
-  const nextImage = () => {
+  const nextImage = () =>
     setCurrentImageIndex((prev) => (prev + 1) % property.gallery.length);
-  };
+  const prevImage = () =>
+    setCurrentImageIndex(
+      (prev) => (prev - 1 + property.gallery.length) % property.gallery.length
+    );
 
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + property.gallery.length) % property.gallery.length);
+  const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null) return;
+    const delta = touchStartX - e.changedTouches[0].clientX;
+    if (delta > 40) nextImage();
+    if (delta < -40) prevImage();
+    setTouchStartX(null);
   };
 
   return (
-    <div className={`relative min-h-screen bg-[#FAF9F6] pt-32 pb-32 transition-opacity duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-      
-      <style>{`
-        @keyframes subtleZoom {
-          0% { opacity: 0.6; transform: scale(1.03); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        .animate-gallery-image {
-          animation: subtleZoom 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-      `}</style>
+    <div
+      className={`relative min-h-screen bg-[#FAF9F6] pt-28 pb-32 transition-opacity duration-700 ${
+        isLoaded ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
+      <div className="max-w-[1440px] mx-auto px-6 md:px-12">
+        {/* Top Back Pill Button */}
+        <div className="flex items-center justify-between mb-10">
+          <button
+            onClick={() => setView('home')}
+            className="rounded-full px-6 py-3 border border-[#191D30]/20 text-[#191D30] font-body text-[10px] tracking-[0.25em] uppercase inline-flex items-center gap-3 hover:bg-[#191D30] hover:text-white transition-all duration-500"
+          >
+            <ArrowLeft size={14} />
+            <span>Back to Collection</span>
+          </button>
 
-      {/* Back navigation */}
-      <button 
-        onClick={goHome}
-        className={`fixed top-8 left-6 md:top-12 md:left-12 p-2 group flex items-center justify-center z-50 transition-all duration-1000 ${isLoaded ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'}`}
-        aria-label="Return to Home"
-      >
-        <ArrowLeft 
-          size={28} 
-          strokeWidth={1} 
-          className="text-[#191D30]/40 group-hover:text-[#191D30] group-hover:-translate-x-2 transition-all duration-500" 
-        />
-      </button>
+          <div className="flex items-center gap-2 text-[#191D30]">
+            <Star size={14} className="fill-[#A18E7E] text-[#A18E7E]" />
+            <span className="font-body text-xs tracking-[0.2em] uppercase">
+              {property.rating} / 10 {property.ratingLabel}
+            </span>
+          </div>
+        </div>
 
-      <div className="max-w-[1200px] mx-auto px-6 md:px-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-          
-          {/* Image gallery */}
-          <div className={`relative aspect-[4/5] w-full overflow-hidden group bg-[#191D30]/5 transition-all duration-1000 delay-100 ${isLoaded ? 'translate-y-0 opacity-100 shadow-2xl' : 'translate-y-12 opacity-0'}`}>
-            
-            <img 
-              key={currentImageIndex}
-              src={property.gallery[currentImageIndex]} 
-              alt={`${property.name} - View ${currentImageIndex + 1}`} 
-              className="w-full h-full object-cover animate-gallery-image"
-            />
-            
-            {property.gallery.length > 1 && (
-              <>
-                <div className="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <button 
-                    onClick={prevImage}
-                    /* Changed p-3 to p-2 (smaller), bg-white/30 to bg-white/10 (more transparent), hover:bg-white/70 to hover:bg-white/30 (less opaque on hover), and shadow-lg to shadow-md */
-                    className="p-2 bg-white/10 backdrop-blur-sm rounded-full text-[#191D30] hover:bg-white/30 transition-all hover:scale-110 active:scale-95 shadow-md"
-                  >
-                    {/* Changed size from 24 to 18 (smaller icon) */}
-                    <ChevronLeft size={18} strokeWidth={1.5} />
-                  </button>
-                  <button 
-                    onClick={nextImage}
-                    /* Changed p-3 to p-2 (smaller), bg-white/30 to bg-white/10 (more transparent), hover:bg-white/70 to hover:bg-white/30 (less opaque on hover), and shadow-lg to shadow-md */
-                    className="p-2 bg-white/10 backdrop-blur-sm rounded-full text-[#191D30] hover:bg-white/30 transition-all hover:scale-110 active:scale-95 shadow-md"
-                  >
-                    {/* Changed size from 24 to 18 (smaller icon) */}
-                    <ChevronRight size={18} strokeWidth={1.5} />
-                  </button>
-                </div>
+        {/* Title Header */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end mb-12">
+          <div className="lg:col-span-8">
+            <span className="font-body text-[11px] tracking-[0.3em] text-[#A18E7E] uppercase block mb-3">
+              {property.subtitle}
+            </span>
+            <h1 className="font-display text-3xl sm:text-5xl text-[#191D30] tracking-[0.06em] uppercase">
+              {property.name}
+            </h1>
+          </div>
+          <div className="lg:col-span-4 flex lg:justify-end gap-3">
+            <button
+              onClick={() => setView('reservation')}
+              className="rounded-full bg-[#191D30] text-white px-8 py-4 font-body text-[10px] tracking-[0.25em] uppercase inline-flex items-center gap-3 hover:bg-[#A18E7E] transition-all duration-500"
+            >
+              <span>Direct Inquiry</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
 
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-[#191D30]/80 backdrop-blur-md rounded-full transform transition-transform duration-500 hover:scale-105 cursor-default">
-                  <p className="font-display text-[9px] tracking-[0.4em] text-white">
-                    {currentImageIndex + 1} / {property.gallery.length}
-                  </p>
-                </div>
-              </>
+        {/* Main Gallery Viewer — Straight Square Corners (rounded-none) */}
+        <div
+          className="relative aspect-[16/10] w-full bg-[#191D30]/10 overflow-hidden rounded-none mb-4"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <SmoothImage
+            src={property.gallery[currentImageIndex]}
+            alt={`${property.name} photo ${currentImageIndex + 1}`}
+            eager={true}
+            containerClassName="w-full h-full rounded-none"
+            className="w-full h-full object-cover rounded-none"
+          />
+
+          {/* Round Pill Gallery Controls */}
+          <button
+            onClick={prevImage}
+            className="absolute left-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 text-[#191D30] flex items-center justify-center hover:bg-[#191D30] hover:text-white transition-all shadow-lg"
+            aria-label="Previous image"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            onClick={nextImage}
+            className="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 text-[#191D30] flex items-center justify-center hover:bg-[#191D30] hover:text-white transition-all shadow-lg"
+            aria-label="Next image"
+          >
+            <ChevronRight size={20} />
+          </button>
+
+          <div className="absolute bottom-5 right-6 bg-[#191D30]/85 px-4 py-1.5 font-body text-[11px] tracking-[0.25em] text-white">
+            {currentImageIndex + 1} / {property.gallery.length}
+          </div>
+        </div>
+
+        {/* Straight Square Thumbnail Strip */}
+        <div className="flex gap-3 overflow-x-auto pb-4 mb-20">
+          {property.gallery.map((imgSrc, idx) => (
+            <button
+              key={imgSrc}
+              onClick={() => setCurrentImageIndex(idx)}
+              className={`relative w-24 h-20 flex-shrink-0 overflow-hidden rounded-none border-2 transition-all ${
+                idx === currentImageIndex
+                  ? 'border-[#191D30] opacity-100'
+                  : 'border-transparent opacity-55 hover:opacity-90'
+              }`}
+            >
+              <img
+                src={imgSrc}
+                alt=""
+                className="w-full h-full object-cover rounded-none"
+              />
+            </button>
+          ))}
+        </div>
+
+        {/* Editorial Details + Architectural Specs Table */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+          <div className="lg:col-span-7 space-y-8">
+            <h2 className="font-display text-2xl md:text-3xl text-[#191D30] tracking-[0.08em] uppercase">
+              The Sanctuary Experience
+            </h2>
+            <p className="font-body font-light text-[14px] md:text-[15px] leading-[2.1] text-[#191D30]/85">
+              {property.description}
+            </p>
+            {property.story && (
+              <p className="font-body font-light text-[14px] md:text-[15px] leading-[2.1] text-[#191D30]/80">
+                {property.story}
+              </p>
             )}
+
+            {/* Amenities Grid */}
+            <div className="pt-8 border-t border-[#191D30]/10">
+              <h3 className="font-display text-sm tracking-[0.25em] text-[#191D30] uppercase mb-6">
+                Curated Amenities
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {property.amenities?.map((amenity) => (
+                  <div key={amenity} className="flex items-center gap-3">
+                    <Check size={14} className="text-[#A18E7E] flex-shrink-0" />
+                    <span className="font-body text-[13px] text-[#191D30]/80">
+                      {amenity}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Text content */}
-          <div className="flex flex-col items-start">
-            
-            <div className={`transition-all duration-1000 delay-200 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-              <h1 className="font-display text-4xl md:text-5xl tracking-[0.2em] text-[#191D30] uppercase mb-4">
-                {property.name}
-              </h1>
-            </div>
-            
-            <div className={`transition-all duration-1000 delay-300 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-              <p className="font-body text-[11px] tracking-[0.3em] text-[#A18E7E] uppercase mb-8">
-                {property.subtitle}
-              </p>
-            </div>
-            
-            <div className={`h-[1px] bg-[#A18E7E] mb-10 transition-all duration-1000 delay-[400ms] ${isLoaded ? 'w-12 opacity-100' : 'w-0 opacity-0'}`} />
-            
-            <div className={`transition-all duration-1000 delay-[500ms] ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-              <p className="font-body font-light text-[14px] md:text-[15px] leading-[2.2] text-[#191D30]/80 mb-16 max-w-md">
-                {property.description}
-              </p>
+          {/* Right Column: Reference-Inspired Specification Rows + Booking CTAs */}
+          <div className="lg:col-span-5 bg-[#191D30] text-white p-8 md:p-12 rounded-none">
+            <span className="font-body text-[10px] tracking-[0.3em] text-[#A18E7E] uppercase block mb-2">
+              Residence Specifications
+            </span>
+            <h3 className="font-display text-2xl tracking-[0.08em] uppercase mb-8">
+              {property.name}
+            </h3>
+
+            <div className="divide-y divide-white/15 border-t border-b border-white/15 mb-8">
+              {property.specs?.map((spec) => (
+                <div
+                  key={spec.label}
+                  className="py-4 flex items-center justify-between"
+                >
+                  <span className="font-body text-[11px] tracking-[0.2em] text-white/60 uppercase">
+                    {spec.label}
+                  </span>
+                  <span className="font-body text-[13px] text-white">
+                    {spec.value}
+                  </span>
+                </div>
+              ))}
+              {property.distances?.map((d) => (
+                <div
+                  key={d.place}
+                  className="py-4 flex items-center justify-between"
+                >
+                  <span className="font-body text-[11px] tracking-[0.15em] text-white/60 uppercase flex items-center gap-1.5">
+                    <MapPin size={12} className="text-[#A18E7E]" />
+                    {d.place}
+                  </span>
+                  <span className="font-body text-[12px] text-white/90">
+                    {d.time}
+                  </span>
+                </div>
+              ))}
             </div>
 
-            <div className={`transition-all duration-1000 delay-[600ms] ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-              <a 
+            <div className="flex flex-col gap-4">
+              <a
                 href={property.bookingLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative inline-flex items-center justify-center px-10 py-5 border border-[#191D30] overflow-hidden transition-all duration-500 hover:border-[#A18E7E]"
+                className="w-full rounded-full bg-white text-[#191D30] py-4 px-8 font-body text-[11px] tracking-[0.25em] uppercase text-center hover:bg-[#A18E7E] hover:text-white transition-all duration-500"
               >
-                <div className="absolute inset-0 w-0 bg-[#A18E7E] transition-all duration-[800ms] ease-out group-hover:w-full" />
-                <span className="relative z-10 text-[#191D30] group-hover:text-white font-body text-[10px] tracking-[0.3em] uppercase transition-colors duration-500">
-                  Check Availability
-                </span>
+                Check Availability on Booking.com →
               </a>
+              <button
+                onClick={() => setView('reservation')}
+                className="w-full rounded-full border border-white/40 text-white py-4 px-8 font-body text-[11px] tracking-[0.25em] uppercase text-center hover:bg-white hover:text-[#191D30] transition-all duration-500"
+              >
+                Direct Concierge Inquiry →
+              </button>
             </div>
-
           </div>
-
         </div>
       </div>
     </div>

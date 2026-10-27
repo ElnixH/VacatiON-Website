@@ -1,51 +1,53 @@
+import { ArrowRight } from 'lucide-react';
+import { TINOS_ATTRACTIONS, useLanguage } from '../data/siteData';
+import SmoothImage from './SmoothImage';
+
 export default function QuoteHero({ setView }) {
-  
-  const handleTinosClick = (e) => {
-    e.preventDefault();
-    setView('discover-tinos'); // FIXED: Now opens the correct page!
-    window.history.pushState(null, '', '#discover-tinos');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const { t } = useLanguage();
 
   return (
-    <section className="relative h-screen w-full overflow-hidden flex items-center justify-center">
-      
-      {/* BACKGROUND IMAGE */}
-      <div className="absolute inset-0 z-0 bg-[#191D30]">
-        <img
-          src="/tinos.webp"
+    <section className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-[#191D30]">
+      {/* Full-Screen Background Image */}
+      <div className="absolute inset-0 z-0">
+        <SmoothImage
+          src={TINOS_ATTRACTIONS.hero}
           alt="Tinos Island"
-          className="w-full h-full object-cover" 
-          style={{ imageRendering: 'high-quality' }}
+          containerClassName="w-full h-full"
+          className="w-full h-full object-cover animate-ken-burns"
         />
-        <div className="absolute inset-0 bg-[#191D30]/30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#191D30]/60 via-[#191D30]/35 to-[#191D30]/75" />
       </div>
 
-      {/* CONTENT BOX */}
-      <div className="relative z-10 text-center px-6 max-w-2xl flex flex-col items-center">
-        
-        <h2 className="font-display text-3xl md:text-5xl tracking-[0.4em] text-white uppercase mb-6 opacity-95 drop-shadow-lg">
-          Why Tinos?
+      {/* Subtle Inner Frame */}
+      <div className="absolute inset-4 sm:inset-8 rounded-2xl border border-white/15 pointer-events-none z-10" />
+
+      {/* Center Full-Screen Content */}
+      <div className="relative z-20 text-center px-6 max-w-3xl flex flex-col items-center">
+        <span className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 font-body text-[10px] tracking-[0.35em] text-[#E6D9CE] uppercase mb-6">
+          {t.quoteHero.eyebrow}
+        </span>
+
+        <h2 className="font-display text-4xl sm:text-6xl md:text-7xl tracking-[0.3em] text-white uppercase mb-6 drop-shadow-lg">
+          {t.quoteHero.title}
         </h2>
-        <p className="font-body text-[11px] tracking-[0.4em] text-white/80 uppercase mb-12">
-          AUTHENTIC CYCLADIC EXPERIENCE
+
+        <div className="w-16 h-[1px] bg-[#A18E7E] mb-8" />
+
+        <p className="font-body text-xs sm:text-sm tracking-[0.3em] text-white/85 uppercase leading-[2.2] mb-12 max-w-xl">
+          {t.quoteHero.subtitle}
         </p>
 
-        {/* THE BUTTON */}
         <button
-          onClick={handleTinosClick}
-          className="group relative inline-flex items-center justify-center px-8 py-3.5 bg-white rounded-sm transition-all duration-500 active:scale-[0.96] overflow-hidden"
+          onClick={() => setView('discover-tinos')}
+          className="group inline-flex items-center gap-3 px-10 py-4 rounded-full bg-white text-[#191D30] hover:bg-[#A18E7E] hover:text-white font-body text-[10px] tracking-[0.35em] font-semibold uppercase transition-all duration-500 shadow-2xl cursor-pointer"
         >
-          <span className="relative z-10 font-body text-[9px] tracking-[0.4em] font-bold uppercase leading-none text-black mix-blend-multiply">
-            Discover
-          </span>
-          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
-            <div className="w-full h-full bg-[#A18E7E] rounded-full scale-0 opacity-0 transition-all duration-1000 ease-out group-hover:scale-[3] group-hover:opacity-20" />
-          </div>
+          <span>{t.quoteHero.button}</span>
+          <ArrowRight
+            size={14}
+            className="transition-transform duration-300 group-hover:translate-x-1"
+          />
         </button>
       </div>
-
-      <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />
     </section>
   );
 }
