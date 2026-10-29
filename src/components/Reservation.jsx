@@ -7,22 +7,26 @@ import {
   Check,
   Calendar as CalendarIcon,
   MessageCircle,
-  ExternalLink,
   AlertCircle,
   ShieldCheck,
   Eye,
   EyeOff,
   Baby,
+  MapPin,
+  ArrowUpRight,
 } from 'lucide-react';
-import { PROPERTIES, useLanguage } from '../data/siteData';
+import { PROPERTIES, useLanguage, getLocalizedProperty } from '../data/siteData';
 import {
+  supabase,
   loadAriStore,
+  syncAriStoreFromCloud,
   getDayAri,
   evaluateStayQuote,
+  DEFAULT_PROPERTY_CONFIG,
 } from '../services/channelManagerStore';
 import SmoothImage from './SmoothImage';
 
-const COUNTRY_PREFIXES = [
+const DEFAULT_COUNTRY_PREFIXES = [
   { label: 'Greece (+30)', value: '+30' },
   { label: 'Italy (+39)', value: '+39' },
   { label: 'United Kingdom (+44)', value: '+44' },
@@ -34,39 +38,27 @@ const COUNTRY_PREFIXES = [
   { label: 'Australia (+61)', value: '+61' },
 ];
 
-const ARRIVAL_TIMES = [
-  '14:00 - 16:00',
-  '16:00 - 18:00',
-  '18:00 - 20:00',
-  '20:00 - 22:00',
-  'Late Arrival (22:00+)',
-];
+const DEFAULT_WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-const CHILD_AGE_OPTIONS = [
-  'Infant (Under 1 yr)',
-  '1 year old',
-  '2 years old',
-  '3 years old',
-  '4 years old',
-  '5 years old',
-  '6 years old',
-  '7 years old',
-  '8 years old',
-  '9 years old',
-  '10 years old',
-  '11 years old',
-  '12 years old',
-  '13 years old',
-  '14 years old',
-  '15 years old',
-  '16 years old',
-  '17 years old',
-];
-
-const formatDotDate = (isoStr) => {
-  if (!isoStr) return 'Select Date';
-  const [y, m, d] = isoStr.split('-');
-  return `${d}.${m}.${y}`;
+const OCCASION_COPY = {
+  en: {
+    label: 'CELEBRATING A BIRTHDAY, HONEYMOON OR ANNIVERSARY? (OPTIONAL)',
+    sub: 'Let us know about your special occasion.',
+    placeholder:
+      'e.g. Birthday for my fiancé, Honeymoon trip, anniversary celebration, or special requests...',
+  },
+  it: {
+    label: 'FESTEGGI UN COMPLEANNO, LUNA DI MIELE O ANNIVERSARIO? (OPZIONALE)',
+    sub: 'Facci sapere della tua occasione speciale.',
+    placeholder:
+      'es. Compleanno per il mio fidanzato/a, viaggio di nozze, anniversario o richieste speciali...',
+  },
+  el: {
+    label: 'ΓΙΟΡΤΑΖΕΤΕ ΓΕΝΕΘΛΙΑ, ΜΗΝΑ ΤΟΥ ΜΕΛΙΤΟΣ Ή ΕΠΕΤΕΙΟ; (ΠΡΟΑΙΡΕΤΙΚΑ)',
+    sub: 'Ενημερώστε μας για την ιδιαίτερη περίστασή σας.',
+    placeholder:
+      'π.χ. Γενέθλια για τον/την αρραβωνιαστικό/ιά μου, ταξίδι του μέλιτος, επέτειος ή ειδικά αιτήματα...',
+  },
 };
 
 const toIsoDate = (dateObj) => {
@@ -77,20 +69,78 @@ const toIsoDate = (dateObj) => {
 };
 
 export default function Reservation({ setView }) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [ariStore, setAriStore] = useState(() => loadAriStore());
+  const occasionText = OCCASION_COPY[lang] || OCCASION_COPY.en;
+
+  // Check if a property was pre-selected before entering Reservation
+  const [selectedPropertyId, setSelectedPropertyId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vacation_selected_property');
+      return saved && PROPERTIES[saved] ? saved : 'villa-leonora';
+    } catch {
+      return 'villa-leonora';
+    }
+  });
+
+  // Step 0: User picks their property at the very beginning (if not locked in yet)
+  const [propertyLockedIn, setPropertyLockedIn] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem('vacation_property_locked'));
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     const syncStore = () => setAriStore(loadAriStore());
+
+    syncAriStoreFromCloud().then((cloudData) => {
+      if (cloudData) setAriStore(cloudData);
+    });
+
     window.addEventListener('s7-ari-updated', syncStore);
     window.addEventListener('storage', syncStore);
+
+    const channel = supabase
+      .channel('realtime-reservation-calendar')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 's7_ari_store',
+          filter: 'id=eq.master',
+        },
+        (payload) => {
+          if (payload?.new?.payload) {
+            setAriStore(payload.new.payload);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       window.removeEventListener('s7-ari-updated', syncStore);
       window.removeEventListener('storage', syncStore);
+      supabase.removeChannel(channel);
     };
   }, []);
 
+  // Automatically load dates & adults chosen on the front-page Hero date bar
   const defaultDates = useMemo(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('vacation_prefill_dates') || '{}');
+      if (saved.checkIn && saved.checkOut) {
+        return {
+          checkIn: saved.checkIn,
+          checkOut: saved.checkOut,
+          adults: Number(saved.adults) || 2,
+        };
+      }
+    } catch {
+      // Ignore storage errors
+    }
     const start = new Date();
     start.setDate(start.getDate() + 14);
     const end = new Date(start);
@@ -98,11 +148,11 @@ export default function Reservation({ setView }) {
     return {
       checkIn: toIsoDate(start),
       checkOut: toIsoDate(end),
+      adults: 2,
     };
   }, []);
 
-  const [selectedPropertyId, setSelectedPropertyId] = useState('villa-leonora');
-  const [adults, setAdults] = useState('2 Adults');
+  const [adultsCount, setAdultsCount] = useState(defaultDates.adults);
   const [childrenCount, setChildrenCount] = useState(0);
   const [childrenAges, setChildrenAges] = useState([]);
   const [arrivalTime, setArrivalTime] = useState('14:00 - 16:00');
@@ -125,25 +175,78 @@ export default function Reservation({ setView }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
-
   const [previewIdx, setPreviewIdx] = useState(0);
 
-  const selectedRoomObj =
-    PROPERTIES[selectedPropertyId] || PROPERTIES['villa-leonora'];
+  const selectedRoomObj = useMemo(
+    () =>
+      (typeof getLocalizedProperty === 'function'
+        ? getLocalizedProperty(selectedPropertyId, lang)
+        : PROPERTIES[selectedPropertyId]) || PROPERTIES['villa-leonora'],
+    [selectedPropertyId, lang]
+  );
 
-  const handlePropertyChange = (newId) => {
-    setSelectedPropertyId(newId);
-    setPreviewIdx(0);
+  const arrivalTimeOptions = useMemo(
+    () => [
+      '14:00 - 16:00',
+      '16:00 - 18:00',
+      '18:00 - 20:00',
+      '20:00 - 22:00',
+      t.reservation?.lateArrival || 'Late Arrival (22:00+)',
+    ],
+    [t]
+  );
+
+  const formatDotDate = (isoStr) => {
+    if (!isoStr) return t.reservation?.selectDatePrompt || 'Select Date';
+    const [y, m, d] = isoStr.split('-');
+    return `${d}.${m}.${y}`;
   };
 
-  // Update children count & dynamically size the ages array
+  const formatAdultsText = (count) =>
+    `${count} ${
+      count === 1
+        ? t.reservation?.adultSingular || 'Adult'
+        : t.reservation?.adultsPlural || 'Adults'
+    }`;
+
+  const formatChildrenText = (count) => {
+    if (count === 0) return t.reservation?.noChildren || 'No Children';
+    return `${count} ${
+      count === 1
+        ? t.reservation?.childSingular || 'Child'
+        : t.reservation?.childrenPlural || 'Children'
+    }`;
+  };
+
+  const formatChildAgeText = (ageVal) => {
+    if (ageVal === 0) return t.reservation?.infantUnder1 || 'Infant (< 1 yr)';
+    return `${ageVal} ${
+      ageVal === 1
+        ? t.reservation?.yearOld || 'year old'
+        : t.reservation?.yearsOld || 'years old'
+    }`;
+  };
+
+  const handleChooseInitialProperty = (pid) => {
+    setSelectedPropertyId(pid);
+    setPreviewIdx(0);
+    setPropertyLockedIn(true);
+    try {
+      localStorage.setItem('vacation_selected_property', pid);
+      localStorage.setItem('vacation_property_locked', 'true');
+    } catch {
+      // ignore storage errors
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleChildrenCountChange = (countNumber) => {
     const count = Number(countNumber);
     setChildrenCount(count);
     setChildrenAges((prev) => {
       const next = [...prev];
       while (next.length < count) {
-        next.push('5 years old');
+        next.push(5);
       }
       return next.slice(0, count);
     });
@@ -152,17 +255,17 @@ export default function Reservation({ setView }) {
   const handleSingleChildAgeChange = (idx, newAge) => {
     setChildrenAges((prev) => {
       const copy = [...prev];
-      copy[idx] = newAge;
+      copy[idx] = Number(newAge);
       return copy;
     });
   };
 
   const guestSummaryText = useMemo(() => {
-    if (childrenCount === 0) return adults;
-    return `${adults}, ${childrenCount} ${
-      childrenCount === 1 ? 'Child' : 'Children'
-    } (${childrenAges.join(', ')})`;
-  }, [adults, childrenCount, childrenAges]);
+    const adultsStr = formatAdultsText(adultsCount);
+    if (childrenCount === 0) return adultsStr;
+    const agesStr = childrenAges.map((a) => formatChildAgeText(a)).join(', ');
+    return `${adultsStr}, ${formatChildrenText(childrenCount)} (${agesStr})`;
+  }, [adultsCount, childrenCount, childrenAges, t]);
 
   const nights = useMemo(() => {
     if (!checkIn || !checkOut) return 1;
@@ -192,6 +295,11 @@ export default function Reservation({ setView }) {
     }
   };
 
+  const localeMap = { en: 'en-US', it: 'it-IT', el: 'el-GR' };
+  const weekDaysList = t.reservation?.weekDays || DEFAULT_WEEKDAYS;
+  const countryPrefixesList =
+    t.reservation?.countryPrefixes || DEFAULT_COUNTRY_PREFIXES;
+
   const renderMonth = (monthOffset) => {
     const viewDate = new Date(
       calMonth.getFullYear(),
@@ -200,7 +308,7 @@ export default function Reservation({ setView }) {
     );
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
-    const monthName = viewDate.toLocaleString('en-US', {
+    const monthName = viewDate.toLocaleString(localeMap[lang] || 'en-US', {
       month: 'long',
       year: 'numeric',
     });
@@ -240,8 +348,10 @@ export default function Reservation({ setView }) {
           onClick={() => handleDayClick(iso, isClosed)}
           title={
             isClosed
-              ? 'Unavailable / Closed'
-              : `€${dayAri.price}/night · Min ${dayAri.minStay} nights`
+              ? t.reservation?.unavailableDay || 'Unavailable / Closed'
+              : `€${dayAri.price}${t.reservation?.perNight || '/night'} · Min ${
+                  dayAri.minStay
+                } ${t.reservation?.nights || 'Nights'}`
           }
           className={`h-11 w-full text-xs font-body transition-all flex flex-col items-center justify-center ${
             isPast
@@ -275,7 +385,7 @@ export default function Reservation({ setView }) {
           {monthName}
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-body text-[#A18E7E] uppercase mb-2">
-          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+          {weekDaysList.map((day) => (
             <span key={day}>{day}</span>
           ))}
         </div>
@@ -290,13 +400,18 @@ export default function Reservation({ setView }) {
     setIsSubmitting(true);
 
     const generatedRef = `VAC-${Math.floor(100000 + Math.random() * 900000)}`;
+    const formattedChildrenAges =
+      childrenCount > 0
+        ? childrenAges.map((a) => formatChildAgeText(a)).join(', ')
+        : 'None';
 
     const formData = {
       bookingReference: generatedRef,
+      propertyId: selectedPropertyId,
       property: selectedRoomObj.name,
-      adults,
+      adults: formatAdultsText(adultsCount),
       childrenCount,
-      childrenAges: childrenCount > 0 ? childrenAges.join(', ') : 'None',
+      childrenAges: formattedChildrenAges,
       arrivalTime,
       checkIn,
       checkOut,
@@ -307,7 +422,36 @@ export default function Reservation({ setView }) {
       ssnOrIdNumber: ssn,
       phone: `${phonePrefix} ${phone}`,
       specialRequests: specialRequests || 'None',
+      language: lang,
     };
+
+    try {
+      await supabase.from('reservations').insert([
+        {
+          booking_ref: generatedRef,
+          property_id: selectedPropertyId,
+          property_name: selectedRoomObj.name,
+          source: 'direct',
+          status: 'pending',
+          check_in: checkIn,
+          check_out: checkOut,
+          nights: Number(nights) || 1,
+          adults: formatAdultsText(adultsCount),
+          children_count: Number(childrenCount) || 0,
+          children_ages: formattedChildrenAges,
+          arrival_time: arrivalTime,
+          total_price: liveQuote?.valid ? Number(liveQuote.totalDirect) : 0,
+          currency: 'EUR',
+          guest_name: name,
+          guest_email: email,
+          guest_phone: `${phonePrefix} ${phone}`,
+          guest_ssn_or_passport: ssn,
+          special_requests: specialRequests || 'None',
+        },
+      ]);
+    } catch {
+      // Continues gracefully
+    }
 
     try {
       await fetch('https://formspree.io/f/xrpzvrgd', {
@@ -331,13 +475,20 @@ export default function Reservation({ setView }) {
       : '';
     const kidsLine =
       childrenCount > 0
-        ? `%0A*Children (${childrenCount}):* ${childrenAges.join(', ')}`
+        ? `%0A*Children (${childrenCount}):* ${childrenAges
+            .map((a) => formatChildAgeText(a))
+            .join(', ')}`
         : '';
+    const occasionLine = specialRequests
+      ? `%0A*Special Occasion / Notes:* ${specialRequests}`
+      : '';
     const text = `Hello VacatiON Tinos! I would like to confirm my reservation request:%0A%0A*Reference:* ${bookingRef}%0A*Sanctuary:* ${selectedRoomObj.name}%0A*Check-In:* ${formatDotDate(
       checkIn
     )}%0A*Check-Out:* ${formatDotDate(
       checkOut
-    )} (${nights} nights)${priceLine}%0A*Adults:* ${adults}${kidsLine}%0A*Arrival:* ${arrivalTime}%0A*Name:* ${name}`;
+    )} (${nights} nights)${priceLine}%0A*Adults:* ${formatAdultsText(
+      adultsCount
+    )}${kidsLine}%0A*Arrival:* ${arrivalTime}%0A*Name:* ${name}${occasionLine}`;
     return `https://wa.me/306973952375?text=${text}`;
   }, [
     bookingRef,
@@ -346,12 +497,106 @@ export default function Reservation({ setView }) {
     checkOut,
     nights,
     liveQuote,
-    adults,
+    adultsCount,
     childrenCount,
     childrenAges,
     arrivalTime,
     name,
+    specialRequests,
   ]);
+
+  // =========================================================================
+  // STEP 0: CHOOSE YOUR SANCTUARY AT THE VERY BEGINNING (No mid-form dropdown)
+  // =========================================================================
+  if (!propertyLockedIn) {
+    return (
+      <div className="min-h-screen bg-[#FAF9F6] pt-28 pb-28 px-4 sm:px-8">
+        <div className="max-w-[1280px] mx-auto">
+          <button
+            onClick={() => setView('home')}
+            className="rounded-full px-5 py-2.5 border border-[#191D30]/15 inline-flex items-center gap-2 text-[#191D30]/70 hover:bg-[#191D30] hover:text-white font-body text-[10px] tracking-[0.25em] uppercase mb-10 transition-all cursor-pointer"
+          >
+            <ArrowLeft size={14} /> {t.reservation?.back}
+          </button>
+
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="font-body text-[10px] tracking-[0.3em] text-[#A18E7E] uppercase block mb-3">
+              STEP 1 OF 2
+            </span>
+            <h1 className="font-display text-3xl sm:text-4xl text-[#191D30] mb-3">
+              {t.reservation?.selectResidence || 'Choose Your Tinos Sanctuary'}
+            </h1>
+            <p className="font-body text-xs sm:text-sm text-[#191D30]/65">
+              {t.reservation?.configBadge}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {Object.keys(PROPERTIES).map((pid) => {
+              const prop =
+                (typeof getLocalizedProperty === 'function'
+                  ? getLocalizedProperty(pid, lang)
+                  : PROPERTIES[pid]) || PROPERTIES[pid];
+              const baseRate =
+                ariStore?.properties?.[pid]?.baseRate ||
+                DEFAULT_PROPERTY_CONFIG?.[pid]?.baseRate ||
+                240;
+
+              return (
+                <div
+                  key={pid}
+                  onClick={() => handleChooseInitialProperty(pid)}
+                  className="group bg-white border border-[#191D30]/10 hover:border-[#A18E7E] transition-all duration-500 flex flex-col justify-between cursor-pointer hover:shadow-xl"
+                >
+                  <div>
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#191D30]">
+                      <SmoothImage
+                        src={prop.coverImage}
+                        alt={prop.name}
+                        containerClassName="w-full h-full rounded-none"
+                        className="w-full h-full object-cover rounded-none transition-transform duration-1000 group-hover:scale-105"
+                      />
+                      <div className="absolute top-4 right-4 bg-white/95 text-[#191D30] px-3 py-1 font-display text-xs font-semibold">
+                        ★ {prop.rating}
+                      </div>
+                    </div>
+
+                    <div className="p-6">
+                      <p className="font-body text-[9.5px] tracking-[0.2em] text-[#A18E7E] uppercase inline-flex items-center gap-1 mb-1.5">
+                        <MapPin size={11} />
+                        <span>{prop.location.split('·')[0]}</span>
+                      </p>
+                      <h2 className="font-display text-2xl text-[#191D30] mb-2">
+                        {prop.name}
+                      </h2>
+                      <p className="font-body font-light text-xs text-[#191D30]/70 line-clamp-2 mb-4">
+                        {prop.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="px-6 py-4 bg-[#FAF9F6] border-t border-[#191D30]/10 flex items-center justify-between">
+                    <div>
+                      <span className="font-display text-lg font-semibold text-[#191D30]">
+                        €{baseRate}
+                      </span>
+                      <span className="font-body text-[10px] text-[#191D30]/60 ml-1">
+                        {t.reservation?.perNight || '/night'}
+                      </span>
+                    </div>
+                    <span className="rounded-full bg-[#191D30] group-hover:bg-[#A18E7E] text-white px-5 py-2 font-body text-[9.5px] tracking-[0.2em] uppercase inline-flex items-center gap-1.5 transition-colors">
+                      <span>{t.nav?.reserve || 'Select'}</span>
+                      <ArrowUpRight size={12} />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -362,47 +607,55 @@ export default function Reservation({ setView }) {
           </div>
 
           <span className="font-body text-[10px] tracking-[0.25em] text-[#A18E7E] uppercase block mb-2">
-            Reservation Registered · #{bookingRef}
+            {t.reservation?.registeredBadge || 'Reservation Registered'} · #{bookingRef}
           </span>
 
           <h1 className="font-display text-2xl md:text-3xl text-[#191D30] uppercase tracking-wider mb-4">
-            Thank You, {name}
+            {t.reservation?.thankYouTitle || 'Thank You'}, {name}
           </h1>
 
           <p className="font-body font-light text-xs md:text-sm text-[#191D30]/70 leading-relaxed mb-8">
-            Our Tinos concierge team has received your request for {selectedRoomObj.name} and will confirm your stay shortly.
+            {t.reservation?.thankYouSub}
           </p>
 
           <div className="bg-[#F5F2EB] p-5 text-left space-y-2.5 mb-8 text-xs font-body">
             <div className="flex justify-between">
-              <span className="text-[#191D30]/60">Residence</span>
+              <span className="text-[#191D30]/60">
+                {t.reservation?.residenceLabel || 'Residence'}
+              </span>
               <span className="font-semibold text-[#191D30]">
                 {selectedRoomObj.name}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#191D30]/60">Check-In → Check-Out</span>
+              <span className="text-[#191D30]/60">
+                {t.reservation?.checkIn} → {t.reservation?.checkOut}
+              </span>
               <span className="font-semibold text-[#191D30]">
                 {formatDotDate(checkIn)} → {formatDotDate(checkOut)} ({nights}{' '}
-                {t.reservation.nights})
+                {nights === 1 ? t.reservation?.night : t.reservation?.nights})
               </span>
             </div>
             {liveQuote?.valid && (
               <div className="flex justify-between">
-                <span className="text-[#191D30]/60">Direct Sanctuary Rate</span>
+                <span className="text-[#191D30]/60">{t.reservation?.directRate}</span>
                 <span className="font-semibold text-[#191D30]">
                   €{liveQuote.totalDirect}
                 </span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-[#191D30]/60">Guests</span>
+              <span className="text-[#191D30]/60">
+                {t.reservation?.guestsSummaryLabel || 'Guests'}
+              </span>
               <span className="font-semibold text-[#191D30] text-right">
                 {guestSummaryText}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#191D30]/60">Arrival Window</span>
+              <span className="text-[#191D30]/60">
+                {t.reservation?.arrivalWindowLabel || 'Arrival Window'}
+              </span>
               <span className="font-semibold text-[#191D30]">{arrivalTime}</span>
             </div>
           </div>
@@ -415,13 +668,15 @@ export default function Reservation({ setView }) {
               className="flex-1 py-4 px-6 rounded-full bg-[#191D30] hover:bg-[#A18E7E] text-white font-body text-[10px] tracking-[0.25em] uppercase font-semibold flex items-center justify-center gap-2 transition-all"
             >
               <MessageCircle size={15} />
-              <span>Priority WhatsApp Concierge</span>
+              <span>
+                {t.reservation?.whatsappConciergeBtn || 'Priority WhatsApp Concierge'}
+              </span>
             </a>
             <button
               onClick={() => setView('home')}
-              className="flex-1 py-4 px-6 rounded-full border border-[#191D30]/20 text-[#191D30] font-body text-[10px] tracking-[0.25em] uppercase font-medium hover:bg-[#191D30] hover:text-white transition-all"
+              className="flex-1 py-4 px-6 rounded-full border border-[#191D30]/20 text-[#191D30] font-body text-[10px] tracking-[0.25em] uppercase font-medium hover:bg-[#191D30] hover:text-white transition-all cursor-pointer"
             >
-              {t.reservation.back}
+              {t.reservation?.back}
             </button>
           </div>
         </div>
@@ -432,12 +687,30 @@ export default function Reservation({ setView }) {
   return (
     <div className="relative min-h-screen bg-[#FAF9F6] pt-28 pb-28">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-8">
-        <button
-          onClick={() => setView('home')}
-          className="rounded-full px-5 py-2.5 border border-[#191D30]/15 inline-flex items-center gap-2 text-[#191D30]/70 hover:bg-[#191D30] hover:text-white font-body text-[10px] tracking-[0.25em] uppercase mb-8 transition-all cursor-pointer"
-        >
-          <ArrowLeft size={14} /> {t.reservation.back}
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <button
+            onClick={() => setView('home')}
+            className="rounded-full px-5 py-2.5 border border-[#191D30]/15 inline-flex items-center gap-2 text-[#191D30]/70 hover:bg-[#191D30] hover:text-white font-body text-[10px] tracking-[0.25em] uppercase transition-all cursor-pointer"
+          >
+            <ArrowLeft size={14} /> {t.reservation?.back}
+          </button>
+
+          {/* Option to return to Step 1 if the guest wants to switch sanctuaries */}
+          <button
+            type="button"
+            onClick={() => {
+              setPropertyLockedIn(false);
+              try {
+                localStorage.removeItem('vacation_property_locked');
+              } catch {
+                // ignore
+              }
+            }}
+            className="font-body text-[10px] tracking-[0.22em] uppercase text-[#A18E7E] hover:text-[#191D30] underline cursor-pointer"
+          >
+            {selectedRoomObj.name} · Change Sanctuary
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* LEFT CARD: STAY CONFIGURATION FORM */}
@@ -446,11 +719,13 @@ export default function Reservation({ setView }) {
             className="lg:col-span-7 bg-white border border-[#191D30]/10 p-6 sm:p-10 shadow-sm space-y-6"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-[#191D30]/10">
-              <h1 className="font-body text-xs font-bold tracking-[0.22em] text-[#191D30] uppercase">
-                {t.reservation.configTitle}
-              </h1>
+              <div>
+                <h1 className="font-body text-xs font-bold tracking-[0.22em] text-[#191D30] uppercase">
+                  {t.reservation?.configTitle} — {selectedRoomObj.name}
+                </h1>
+              </div>
               <span className="font-body text-[11px] text-[#191D30]/60">
-                {t.reservation.configBadge}
+                {t.reservation?.configBadge}
               </span>
             </div>
 
@@ -458,48 +733,48 @@ export default function Reservation({ setView }) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                  Adults
+                  {t.reservation?.adultsLabel}
                 </label>
                 <select
-                  value={adults}
-                  onChange={(e) => setAdults(e.target.value)}
+                  value={adultsCount}
+                  onChange={(e) => setAdultsCount(Number(e.target.value))}
                   className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] focus:outline-none focus:border-[#191D30]"
                 >
-                  <option value="1 Adult">1 Adult</option>
-                  <option value="2 Adults">2 Adults</option>
-                  <option value="3 Adults">3 Adults</option>
-                  <option value="4 Adults">4 Adults</option>
-                  <option value="5 Adults">5 Adults</option>
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <option key={num} value={num}>
+                      {formatAdultsText(num)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
                 <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                  Children (Under 18)
+                  {t.reservation?.childrenLabel}
                 </label>
                 <select
                   value={childrenCount}
                   onChange={(e) => handleChildrenCountChange(e.target.value)}
                   className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] focus:outline-none focus:border-[#191D30]"
                 >
-                  <option value={0}>No Children</option>
-                  <option value={1}>1 Child</option>
-                  <option value={2}>2 Children</option>
-                  <option value={3}>3 Children</option>
-                  <option value={4}>4 Children</option>
+                  {[0, 1, 2, 3, 4].map((num) => (
+                    <option key={num} value={num}>
+                      {formatChildrenText(num)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
                 <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                  {t.reservation.arrivalTime}
+                  {t.reservation?.arrivalTime}
                 </label>
                 <select
                   value={arrivalTime}
                   onChange={(e) => setArrivalTime(e.target.value)}
                   className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] focus:outline-none focus:border-[#191D30]"
                 >
-                  {ARRIVAL_TIMES.map((time) => (
+                  {arrivalTimeOptions.map((time) => (
                     <option key={time} value={time}>
                       {time}
                     </option>
@@ -514,14 +789,14 @@ export default function Reservation({ setView }) {
                 <div className="flex items-center gap-2 text-[#191D30]">
                   <Baby size={14} className="text-[#A18E7E]" />
                   <span className="font-body text-[10px] font-semibold tracking-[0.2em] uppercase">
-                    Age of {childrenCount === 1 ? 'Child' : 'Children'} at Check-In
+                    {t.reservation?.childAgeHeader}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   {childrenAges.map((ageVal, idx) => (
                     <div key={`child-age-${idx}`}>
                       <label className="block font-body text-[9px] tracking-[0.15em] text-[#191D30]/60 uppercase mb-1">
-                        Child {idx + 1} Age
+                        {t.reservation?.childAgeLabel} {idx + 1}
                       </label>
                       <select
                         value={ageVal}
@@ -530,9 +805,9 @@ export default function Reservation({ setView }) {
                         }
                         className="w-full bg-white border border-[#191D30]/15 px-3 py-2.5 text-xs font-body text-[#191D30] focus:outline-none focus:border-[#191D30]"
                       >
-                        {CHILD_AGE_OPTIONS.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
+                        {Array.from({ length: 18 }, (_, ageNum) => (
+                          <option key={ageNum} value={ageNum}>
+                            {formatChildAgeText(ageNum)}
                           </option>
                         ))}
                       </select>
@@ -542,32 +817,10 @@ export default function Reservation({ setView }) {
               </div>
             )}
 
-            {/* Row 2: Curated Collection Dropdown */}
-            <div>
-              <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                {t.reservation.curatedCollection}
-              </label>
-              <select
-                value={selectedPropertyId}
-                onChange={(e) => handlePropertyChange(e.target.value)}
-                className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] font-medium focus:outline-none focus:border-[#191D30]"
-              >
-                <option value="villa-leonora">
-                  Villa Leonora — Private Infinity Pool Sanctuary (★ 9.9 • Up to 4 Guests)
-                </option>
-                <option value="andreas-traditional">
-                  Andrea&apos;s Traditional House — Cycladic Haven (★ 9.8 • Up to 3 Guests)
-                </option>
-                <option value="andreas-two-bed">
-                  Andrea&apos;s Two-Bedroom House — Spacious Family Retreat (★ 9.7 • Up to 5 Guests)
-                </option>
-              </select>
-            </div>
-
-            {/* Row 3: Interactive Check-In & Check-Out Date Box */}
+            {/* Row 2: Interactive Check-In & Check-Out Date Box */}
             <div className="relative">
               <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                {t.reservation.selectDates}
+                {t.reservation?.selectDates}
               </label>
 
               <div
@@ -577,7 +830,7 @@ export default function Reservation({ setView }) {
                 <div className="flex items-center gap-6 sm:gap-10">
                   <div>
                     <span className="block font-body text-[8.5px] tracking-[0.2em] text-[#191D30]/50 uppercase">
-                      {t.reservation.checkIn}
+                      {t.reservation?.checkIn}
                     </span>
                     <span className="font-body text-sm font-bold text-[#191D30]">
                       {formatDotDate(checkIn)}
@@ -588,7 +841,7 @@ export default function Reservation({ setView }) {
 
                   <div>
                     <span className="block font-body text-[8.5px] tracking-[0.2em] text-[#191D30]/50 uppercase">
-                      {t.reservation.checkOut}
+                      {t.reservation?.checkOut}
                     </span>
                     <span className="font-body text-sm font-bold text-[#191D30]">
                       {formatDotDate(checkOut)}
@@ -599,7 +852,7 @@ export default function Reservation({ setView }) {
                 <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#191D30] text-white font-body text-[10px] tracking-wider uppercase">
                   <CalendarIcon size={12} />
                   <span>
-                    {nights} {nights === 1 ? t.reservation.night : t.reservation.nights}
+                    {nights} {nights === 1 ? t.reservation?.night : t.reservation?.nights}
                   </span>
                 </div>
               </div>
@@ -626,7 +879,7 @@ export default function Reservation({ setView }) {
                       <ChevronLeft size={16} />
                     </button>
                     <span className="font-body text-[10px] tracking-[0.25em] text-[#A18E7E] uppercase">
-                      Select Check-In &amp; Check-Out Days
+                      {t.reservation?.selectDaysHeader || t.reservation?.selectDates}
                     </span>
                     <button
                       type="button"
@@ -655,59 +908,59 @@ export default function Reservation({ setView }) {
                       }}
                       className="font-body text-xs text-[#191D30]/60 hover:text-[#191D30] underline"
                     >
-                      {t.reservation.clearDates}
+                      {t.reservation?.clearDates}
                     </button>
                     <button
                       type="button"
                       onClick={() => setCalendarOpen(false)}
                       className="px-6 py-2 rounded-full bg-[#191D30] text-white font-body text-xs tracking-wider uppercase"
                     >
-                      {t.reservation.applyDates}
+                      {t.reservation?.applyDates}
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Row 4: Full Name, Email & SSN / National Identification */}
+            {/* Row 3: Full Name & Email */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                  {t.reservation.fullName}
+                  {t.reservation?.fullName}
                 </label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Full Name"
+                  placeholder={t.reservation?.fullNamePlaceholder || 'Full Name'}
                   className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] placeholder:text-[#191D30]/35 focus:outline-none focus:border-[#191D30]"
                 />
               </div>
 
               <div>
                 <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                  {t.reservation.email}
+                  {t.reservation?.email}
                 </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@email.com"
+                  placeholder={t.reservation?.emailPlaceholder || 'name@email.com'}
                   className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] placeholder:text-[#191D30]/35 focus:outline-none focus:border-[#191D30]"
                 />
               </div>
             </div>
 
-            {/* Row 5: SSN / National ID / Passport (Protected Input with Mask Toggle) */}
+            {/* Row 4: SSN / National ID / Passport */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase">
-                  SSN / National ID / Passport Number
+                  {t.reservation?.ssnLabel}
                 </label>
                 <span className="inline-flex items-center gap-1 font-body text-[9.5px] text-emerald-700">
-                  <ShieldCheck size={12} /> Encrypted Guest Registration
+                  <ShieldCheck size={12} /> {t.reservation?.ssnBadge}
                 </span>
               </div>
               <div className="relative">
@@ -716,7 +969,7 @@ export default function Reservation({ setView }) {
                   required
                   value={ssn}
                   onChange={(e) => setSsn(e.target.value)}
-                  placeholder="Enter SSN, Tax ID, or Passport No. for hospitality registration"
+                  placeholder={t.reservation?.ssnPlaceholder}
                   autoComplete="off"
                   className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 pr-11 text-xs font-body text-[#191D30] placeholder:text-[#191D30]/35 focus:outline-none focus:border-[#191D30]"
                 />
@@ -731,10 +984,10 @@ export default function Reservation({ setView }) {
               </div>
             </div>
 
-            {/* Row 6: Phone / WhatsApp Number */}
+            {/* Row 5: Phone / WhatsApp Number */}
             <div>
               <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                {t.reservation.phone}
+                {t.reservation?.phone}
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <select
@@ -742,7 +995,7 @@ export default function Reservation({ setView }) {
                   onChange={(e) => setPhonePrefix(e.target.value)}
                   className="sm:col-span-5 bg-[#F5F2EB] border border-[#191D30]/10 px-3.5 py-3.5 text-xs font-body text-[#191D30] focus:outline-none focus:border-[#191D30]"
                 >
-                  {COUNTRY_PREFIXES.map((c) => (
+                  {countryPrefixesList.map((c) => (
                     <option key={c.value} value={c.value}>
                       {c.label}
                     </option>
@@ -760,17 +1013,20 @@ export default function Reservation({ setView }) {
               </div>
             </div>
 
-            {/* Row 7: Special Requests */}
+            {/* Row 6: Special Occasion / Honeymoon / Fiancé Birthday Box */}
             <div>
-              <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-2">
-                {t.reservation.specialRequests}
+              <label className="block font-body text-[9.5px] tracking-[0.2em] text-[#191D30]/65 uppercase mb-1">
+                {occasionText.label}
               </label>
+              <p className="font-body text-[11px] text-[#A18E7E] mb-2">
+                {occasionText.sub}
+              </p>
               <textarea
                 rows="3"
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
-                placeholder="Ferry arrival details, baby crib request, Early Bird 2027 inquiry, or special requests..."
-                className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] placeholder:text-[#191D30]/35 resize-none focus:outline-none focus:border-[#191D30]"
+                placeholder={occasionText.placeholder}
+                className="w-full bg-[#F5F2EB] border border-[#191D30]/10 px-4 py-3.5 text-xs font-body text-[#191D30] placeholder:text-[#191D30]/40 resize-none focus:outline-none focus:border-[#191D30]"
               />
             </div>
 
@@ -779,13 +1035,15 @@ export default function Reservation({ setView }) {
               disabled={isSubmitting || (liveQuote && !liveQuote.valid)}
               className="w-full py-4 rounded-full bg-[#191D30] hover:bg-[#A18E7E] text-white font-body text-[11px] tracking-[0.25em] uppercase font-semibold transition-all shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Sending...' : `${t.reservation.confirmBtn} →`}
+              {isSubmitting
+                ? t.reservation?.sending || 'Sending...'
+                : `${t.reservation?.confirmBtn} →`}
             </button>
           </form>
 
-          {/* RIGHT CARD: INTERACTIVE PHOTO VIEWER & SUMMARY */}
+          {/* RIGHT CARD: INTERACTIVE PHOTO VIEWER & SUMMARY (Frameless Arrows & No Booking.com Button) */}
           <div className="lg:col-span-5 lg:sticky lg:top-24 bg-white border border-[#191D30]/10 p-6 shadow-sm space-y-5">
-            <div className="relative aspect-[4/3] w-full rounded-none overflow-hidden bg-[#191D30]/5">
+            <div className="relative aspect-[4/3] w-full rounded-none overflow-hidden bg-[#191D30]/5 select-none">
               <SmoothImage
                 key={selectedRoomObj.gallery[previewIdx]}
                 src={selectedRoomObj.gallery[previewIdx]}
@@ -795,28 +1053,36 @@ export default function Reservation({ setView }) {
                 className="w-full h-full object-cover rounded-none"
               />
 
+              {/* Frameless Left Arrow (No white circle) */}
               <button
                 type="button"
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
                   setPreviewIdx(
                     (prev) =>
                       (prev - 1 + selectedRoomObj.gallery.length) %
                       selectedRoomObj.gallery.length
-                  )
-                }
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-[#191D30] flex items-center justify-center shadow-md transition-transform hover:scale-105"
+                  );
+                }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-1.5 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] hover:text-[#A18E7E] hover:scale-110 transition-all cursor-pointer bg-transparent border-none"
+                aria-label="Previous photo"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={32} strokeWidth={1.6} />
               </button>
 
+              {/* Frameless Right Arrow (No white circle) */}
               <button
                 type="button"
-                onClick={() =>
-                  setPreviewIdx((prev) => (prev + 1) % selectedRoomObj.gallery.length)
-                }
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-[#191D30] flex items-center justify-center shadow-md transition-transform hover:scale-105"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewIdx(
+                    (prev) => (prev + 1) % selectedRoomObj.gallery.length
+                  );
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-1.5 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] hover:text-[#A18E7E] hover:scale-110 transition-all cursor-pointer bg-transparent border-none"
+                aria-label="Next photo"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={32} strokeWidth={1.6} />
               </button>
 
               <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 bg-black/75 text-white font-body text-[10px]">
@@ -831,7 +1097,7 @@ export default function Reservation({ setView }) {
                     key={img}
                     type="button"
                     onClick={() => setPreviewIdx(i)}
-                    className={`aspect-[4/3] rounded-none overflow-hidden border-2 transition-all ${
+                    className={`aspect-[4/3] rounded-none overflow-hidden border-2 transition-all cursor-pointer ${
                       previewIdx === i
                         ? 'border-[#191D30] opacity-100'
                         : 'border-transparent opacity-55 hover:opacity-90'
@@ -876,57 +1142,51 @@ export default function Reservation({ setView }) {
                   {formatDotDate(checkIn)} → {formatDotDate(checkOut)}
                 </span>
                 <span className="font-semibold">
-                  {nights} {nights === 1 ? t.reservation.night : t.reservation.nights}
+                  {nights} {nights === 1 ? t.reservation?.night : t.reservation?.nights}
                 </span>
               </div>
 
               <div className="flex justify-between text-[#191D30]/75 gap-4">
-                <span>Guests</span>
+                <span>{t.reservation?.guestsSummaryLabel || 'Guests'}</span>
                 <span className="font-medium text-[#191D30] text-right">
                   {guestSummaryText}
                 </span>
               </div>
 
               <div className="flex justify-between text-[#191D30]/75">
-                <span>Direct Sanctuary Rate</span>
+                <span>{t.reservation?.directRate}</span>
                 <span className="font-semibold text-[#191D30]">
                   {liveQuote?.valid
-                    ? `€${liveQuote.totalDirect} (€${liveQuote.avgNightly}/night)`
-                    : t.reservation.directRate}
+                    ? `€${liveQuote.totalDirect} (€${liveQuote.avgNightly}${
+                        t.reservation?.perNight || '/night'
+                      })`
+                    : t.reservation?.directRate}
                 </span>
               </div>
 
               {liveQuote?.valid && (
                 <div className="flex justify-between text-[#191D30]/45 line-through text-[11px]">
-                  <span>Standard OTA Channel Rate</span>
+                  <span>
+                    {t.reservation?.otaRate || 'Standard OTA Channel Rate'}
+                  </span>
                   <span>€{liveQuote.totalOta}</span>
                 </div>
               )}
 
               <div className="flex justify-between text-[#191D30]/75">
-                <span>{t.reservation.welcomeIncluded}</span>
+                <span>{t.reservation?.welcomeIncluded}</span>
                 <span className="text-[#191D30] font-bold">✓</span>
               </div>
 
               <div className="pt-4 border-t border-[#191D30]/10 flex items-center justify-between">
                 <span className="font-display text-sm text-[#191D30] font-semibold">
-                  Booking.com Rating
+                  {t.reservation?.bookingRatingLabel || 'Booking.com Rating'}
                 </span>
                 <span className="font-display text-lg text-[#A18E7E] font-bold">
                   ★ {selectedRoomObj.rating} / 10
                 </span>
               </div>
             </div>
-
-            <a
-              href={selectedRoomObj.bookingLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3.5 px-4 rounded-full border border-[#191D30]/20 hover:bg-[#191D30] hover:text-white text-[#191D30] font-body text-[10px] tracking-[0.2em] uppercase flex items-center justify-center gap-2 transition-all"
-            >
-              <span>Or Check Live Calendar on Booking.com</span>
-              <ExternalLink size={12} />
-            </a>
           </div>
         </div>
       </div>

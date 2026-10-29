@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, createElement } from 'react';
+// src/data/siteData.js
+import { createContext, useContext, useState, useEffect, createElement } from 'react';
 
 export const BRAND_ASSETS = {
   logo: '/VacationLogo.png',
@@ -6,7 +7,192 @@ export const BRAND_ASSETS = {
   heroImage: '/images/properties/villa-leonora/image00015.webp',
   aboutImage: '/images/properties/villa-leonora/image00002.webp',
   bookingReviewsUrl:
-    'https://www.booking.com/hotel/gr/villa-leonora-tinos.html?aid=898224&label=hotel_details-KNEigd4%401777400372&sid=460e206a28afa890ba9a72f29bcece90&checkin=2026-05-14&checkout=2026-05-15&dist=0&from_sn=ios&group_adults=2&group_children=0&keep_landing=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA%2C&sb_price_type=total&type=total&#tab-reviews',
+    'https://www.booking.com/hotel/gr/villa-leonora-tinos.html?aid=898224&label=hotel_details-KNEigd4%401777400372#tab-reviews',
+};
+
+// Structured Amenity Categories from your Booking.com Facilities Sheet (Translated in EN/IT/EL)
+export const SANCTUARY_AMENITY_GROUPS = {
+  en: [
+    {
+      category: 'Outdoors & Infinity Pool',
+      badge: 'Free',
+      items: [
+        'Private Infinity Pool (Villa Leonora)',
+        'Pool with 180° Aegean View & Shallow End',
+        'Sun Deck with Plush Loungers & Beach Chairs',
+        'Outdoor Dining Area, Patio & Balcony',
+        'Private BBQ Facilities & Mediterranean Garden',
+      ],
+    },
+    {
+      category: 'Kitchen & Dining',
+      items: [
+        'Full Chef Kitchen & Dining Table',
+        'Espresso Coffee Machine & Electric Kettle',
+        'Oven, Stovetop & Toaster',
+        'Dishwasher & Full-Size Refrigerator',
+        'Washing Machine & Kitchenware',
+      ],
+    },
+    {
+      category: 'Panoramic Views',
+      items: [
+        'Uninterrupted Aegean Sea & 11-Island View',
+        'Pool, Garden & Mountain Views',
+        'Tinos Landmark & Inner Courtyard Views',
+        'Detached Private Cycladic Architecture',
+      ],
+    },
+    {
+      category: 'Bedrooms, Bath & Living',
+      items: [
+        'King & Queen Beds with Fine Organic Linens',
+        'Private Marble Bathrooms with Walk-In Shower',
+        'Complimentary Toiletries, Hairdryer & Bidet',
+        'Living Area with Sofa, Desk & Flat-Screen TV',
+        'Tile/Marble Floors, Private Entrance & Iron',
+      ],
+    },
+    {
+      category: 'Parking, Wi-Fi & Comfort',
+      badge: 'Free',
+      items: [
+        'Free Private On-Site Parking (No Reservation Needed)',
+        'Complimentary High-Speed Wi-Fi in All Rooms',
+        'Air Conditioning, Heating & Soundproof Rooms',
+        'Non-Smoking & Family-Friendly Sanctuaries',
+      ],
+    },
+    {
+      category: 'Concierge, Safety & Languages',
+      items: [
+        'Private & Express Check-In / Check-Out',
+        'Invoice Provided & Daily Housekeeping Available',
+        'Exterior CCTV Security, Fire Extinguishers & Key Access',
+        'Languages Spoken: Greek, English & Italian',
+      ],
+    },
+  ],
+  it: [
+    {
+      category: 'Esterni e Piscina a Sfioro',
+      badge: 'Gratis',
+      items: [
+        'Piscina Privata a Sfioro (Villa Leonora)',
+        'Piscina con Vista Egeo a 180°',
+        'Terrazza Solarium con Lettini Prendisole',
+        'Zona Pranzo all’Aperto, Patio e Balcone',
+        'Barbecue Privato e Giardino Mediterraneo',
+      ],
+    },
+    {
+      category: 'Cucina e Sala da Pranzo',
+      items: [
+        'Cucina Completa e Tavolo da Pranzo',
+        'Macchina da Caffè Espresso e Bollitore',
+        'Forno, Piano Cottura e Tostapane',
+        'Lavastoviglie e Frigorifero Capiente',
+        'Lavatrice e Utensili da Cucina',
+      ],
+    },
+    {
+      category: 'Viste Panoramiche',
+      items: [
+        'Vista Mare Egeo e 11 Isole Cicladi',
+        'Vista Piscina, Giardino e Montagna',
+        'Vista Corte Interna e Architettura Cicladica Indipendente',
+      ],
+    },
+    {
+      category: 'Camere, Bagni e Soggiorno',
+      items: [
+        'Letti King e Queen con Biancheria Pregiata',
+        'Bagni Privati in Marmo con Doccia e Bidet',
+        'Set di Cortesia Gratuito e Asciugacapelli',
+        'Zona Giorno con Divano, Scrivania e Smart TV',
+        'Pavimenti in Marmo, Ingresso Privato e Ferro da Stiro',
+      ],
+    },
+    {
+      category: 'Parcheggio, Wi-Fi e Comfort',
+      badge: 'Gratis',
+      items: [
+        'Parcheggio Privato Gratuito in Loco',
+        'Wi-Fi ad Alta Velocità Gratuito in Tutte le Aree',
+        'Aria Condizionata, Riscaldamento e Camere Insonorizzate',
+        'Camere Non Fumatori e Ideali per Famiglie',
+      ],
+    },
+    {
+      category: 'Concierge, Sicurezza e Lingue',
+      items: [
+        'Check-In / Check-Out Privato ed Express',
+        'Fattura Disponibile e Servizio Pulizie su Richiesta',
+        'Videosorveglianza Esterna, Estintori e Accesso con Chiave',
+        'Lingue Parlate: Greco, Inglese e Italiano',
+      ],
+    },
+  ],
+  el: [
+    {
+      category: 'Εξωτερικοί Χώροι & Πισίνα Infinity',
+      badge: 'Δωρεάν',
+      items: [
+        'Ιδιωτική Πισίνα Infinity (Villa Leonora)',
+        'Πισίνα με Πανοραμική Θέα στο Αιγαίο',
+        'Ηλιόλουστη Βεράντα με Ξαπλώστρες',
+        'Εξωτερική Τραπεζαρία, Αίθριο & Μπαλκόνι',
+        'Εγκαταστάσεις BBQ & Μεσογειακός Κήπος',
+      ],
+    },
+    {
+      category: 'Κουζίνα & Τραπεζαρία',
+      items: [
+        'Πλήρως Εξοπλισμένη Κουζίνα & Τραπεζαρία',
+        'Καφετιέρα Espresso & Ηλεκτρικός Βραστήρας',
+        'Φούρνος, Εστίες & Φρυγανιέρα',
+        'Πλυντήριο Πιάτων & Ψυγείο',
+        'Πλυντήριο Ρούχων & Πλήρης Εξοπλισμός',
+      ],
+    },
+    {
+      category: 'Πανοραμική Θέα',
+      items: [
+        'Ανεμπόδιστη Θέα στο Αιγαίο & σε 11 Κυκλαδονήσια',
+        'Θέα σε Πισίνα, Κήπο & Βουνό',
+        'Ανεξάρτητη Κυκλαδίτικη Αρχιτεκτονική',
+      ],
+    },
+    {
+      category: 'Υπνοδωμάτια, Μπάνιο & Καθιστικό',
+      items: [
+        'Υπέρδιπλα Κρεβάτια με Εκλεκτά Κλινοσκεπάσματα',
+        'Ιδιωτικά Μαρμάρινα Μπάνια με Ντους',
+        'Δωρεάν Προϊόντα Περιποίησης & Στεγνωτήρας Μαλλιών',
+        'Καθιστικό με Καναπέ, Γραφείο & Τηλεόραση Επίπεδης Οθόνης',
+        'Μαρμάρινα Δάπεδα, Ιδιωτική Είσοδος & Σίδερο',
+      ],
+    },
+    {
+      category: 'Parking, Wi-Fi & Άνεση',
+      badge: 'Δωρεάν',
+      items: [
+        'Δωρεάν Ιδιωτικός Χώρος Στάθμευσης στις Εγκαταστάσεις',
+        'Δωρεάν Υψηλής Ταχύτητας Wi-Fi σε Όλους τους Χώρους',
+        'Κλιματισμός, Θέρμανση & Ηχομονωμένα Δωμάτια',
+        'Οικογενειακά Δωμάτια Μη Καπνιστών',
+      ],
+    },
+    {
+      category: 'Υπηρεσίες, Ασφάλεια & Γλώσσες',
+      items: [
+        'Ιδιωτικό & Γρήγορο Check-In / Check-Out',
+        'Έκδοση Τιμολογίου & Καθημερινή Καθαριότητα (κατόπιν αιτήματος)',
+        'Κάμερες Ασφαλείας Εξωτερικά & Πυροσβεστήρες',
+        'Γλώσσες Επικοινωνίας: Ελληνικά, Αγγλικά & Ιταλικά',
+      ],
+    },
+  ],
 };
 
 export const TRANSLATIONS = {
@@ -26,38 +212,72 @@ export const TRANSLATIONS = {
       ourProperties: 'Our Properties',
     },
     hero: {
+      trustedBy: 'Trusted by Guests Who Believe in Authentic Cycladic Care',
+      trustLine1: 'Trusted by Guests Who Believe',
+      trustLine2: 'in Authentic Cycladic Care',
       luxuryLiving: 'Luxury Living',
       redefined: 'Redefined',
-      titleLine1: 'Above the sea,',
-      titleLine2: 'where every sunset feels',
-      titleLine3: 'like it’s yours alone.',
-      exploreBtn: 'Explore Our Sanctuaries',
+      titleLine1: 'Discover the perfect',
+      titleLine2: 'blend of luxury &',
+      titleLine3: 'comfort on Tinos Island',
+      subtitle:
+        'Enjoy your vacation & experience the ultimate in Cycladic luxury and serenity as you relax and unwind above the Aegean Sea.',
+      exploreBtn: 'Explore Sanctuaries',
       reserveBtn: 'Book Your Stay',
     },
+    earlyBird: {
+      badge: 'EARLY BIRD 2027',
+      pillLabel: 'EARLY BIRD 2027',
+      title: 'Your Tinos Escape Starts Here',
+      description: 'Book your stay for 2027 and enjoy our exclusive Early Bird offers.',
+      button: 'Reserve Now',
+      closeLabel: 'Close Early Bird offer',
+    },
     collection: {
-      eyebrow: 'Room / Suite',
+      eyebrow: 'RESIDENCES & SUITES',
       heading1: 'Elegantly',
       heading2: 'Curated Sanctuaries',
       subtext:
         'Every residence is designed with comfort, Cycladic style, and sophistication to give you a truly unforgettable island stay.',
-      viewAllBtn: 'Reserve a Sanctuary',
-      detailsEyebrow: 'Designed for Comfort & Style',
-      detailsTitle: 'Sanctuary Details at a Glance',
-      explore: 'Explore Sanctuary',
+      reserveBtn: 'RESERVE A SANCTUARY',
+      explore: 'EXPLORE SANCTUARY',
+      from: 'From',
+      perNight: '/ Night',
+      upToGuests: 'Up to',
+      guests: 'Guests',
+      glanceEyebrow: 'DESIGNED FOR COMFORT & STYLE',
+      glanceTitle: 'Sanctuary Details at a Glance',
+      glanceBullets: [
+        'Private Infinity Pool & Sun Loungers at Villa Leonora',
+        "12-Minute Stroll to Golden Sands at Andrea's Houses",
+        'Complimentary Welcome Provisions & On-Site Parking',
+      ],
+      facilitiesTitle: 'Complete Sanctuary Facilities & Amenities',
+      facilitiesSub: 'Everything included across our Tinos residences for an effortless stay.',
+      specRows: [
+        { label: 'LOCATIONS ON TINOS', value: 'Arnados Hills & Agios Sostis Coast' },
+        { label: 'ARCHITECTURAL STYLE', value: 'Hand-Quarried Tinos Stone & Cycladic Arches' },
+        { label: 'ACCOMMODATIONS', value: '3 Private Sanctuaries (Up to 5 Guests Each)' },
+        { label: 'BATHROOMS & SUITES', value: 'Ensuite Marble & Modern Walk-In Showers' },
+        {
+          label: 'PRIVATE POOL & BEACH',
+          value: "Infinity Pool (Villa Leonora) · 12 Min Walk to Beach (Andrea's)",
+        },
+        { label: 'OUTDOOR SPACES', value: 'Panoramic Sun Terraces, Gardens & Alfresco BBQ' },
+      ],
     },
     quoteHero: {
-      eyebrow: 'THE ISLAND DESTINATION',
       title: 'Why Tinos?',
-      subtitle: 'AUTHENTIC CYCLADIC EXPERIENCE · MARBLE, WIND & WILD BEAUTY',
+      subtitle: 'AUTHENTIC CYCLADIC EXPERIENCE',
       button: 'Discover Tinos',
     },
     about: {
-      eyebrow: 'About',
+      eyebrow: 'ABOUT',
       title1: 'Experience',
       title2: 'Unmatched Luxury',
       p1: 'Vacation offers guests an unparalleled Cycladic sanctuary experience on Tinos Island, blending modern comfort with timeless Aegean sophistication.',
       p2: 'We believe true luxury is found in the silent intervals—the play of sunlight on Tinos stone, crisp organic linens, and the privacy of a space designed around the horizon.',
-      button: 'Discover More',
+      button: 'DISCOVER MORE',
       stat1Val: '100%',
       stat1Label: 'NATURAL SURROUNDINGS',
       stat2Val: '10 MIN',
@@ -67,49 +287,168 @@ export const TRANSLATIONS = {
     },
     reviews: {
       eyebrow: '9.9 / 10 Booking.com Exceptional',
+      verifiedScorePrefix: 'Verified Booking.com Score',
       title: 'Guest Experiences',
-      showMore: 'Extend to See More Reviews',
+      showMore: 'See All Verified Reviews',
       showLess: 'Show Fewer Reviews',
-      openWindow: 'Open Booking.com Reviews Window',
+      openWindow: 'Verify on Booking.com',
+    },
+    mediaHub: {
+      title: 'M E D I A   H U B',
+      subtitle: 'THE VACATION VISUAL ARCHIVES',
+      allArchives: 'ALL ARCHIVES',
+      tinosIsland: 'TINOS ISLAND',
+      villaLeonora: 'VILLA LEONORA',
+      andreasTraditional: "ANDREA'S TRADITIONAL",
+      andreasTwoBed: "ANDREA'S TWO-BEDROOM",
+      backHome: 'Return to Home',
+    },
+    propertyPage: {
+      back: 'Back to Sanctuaries',
+      highlights: 'Sanctuary Highlights',
+      theStory: 'The Story',
+      amenitiesTitle: 'Curated Amenities',
+      distancesTitle: 'Island Distances',
+      reserveDirect: 'Reserve Direct',
+      checkBooking: 'Check Availability on Booking.com',
+      galleryCount: 'Photos',
+    },
+    tinosPage: {
+      back: 'Back to Sanctuaries',
+      badge: 'The Island of Marble & Light',
+      title: 'Tinos',
+      subtitle: 'The hidden muse of the Cyclades.\nA sanctuary of marble, wind, and wild beauty.',
+      introEyebrow: 'RAW & AUTHENTIC CYCLADES',
+      introTitle: 'An island kept as a secret among artists & connoisseurs',
+      introP1:
+        'Located in the heart of the Cyclades just 15 minutes by ferry from Mykonos, Tinos embodies a laid-back, grounded glamour not found anywhere else in the Aegean.',
+      introP2:
+        'On this island, all your senses are magnified by its contrasts: lush terraced hills against the lunar granite boulders of Volax, UNESCO-protected marble artistry in Pyrgos, and unspoiled golden shores where the water mirrors the sky.',
+      planBtn: 'Plan Your Tinos Escape',
+      compassEyebrow: 'CURATED ISLAND COMPASS',
+      compassTitle: 'Sacred Villages & Untamed Shores',
+      filterAll: 'All Highlights',
+      filterVillages: 'Marble Villages',
+      filterBeaches: 'Aegean Beaches',
+      villagesHeading: 'I. The Historic Villages',
+      beachesHeading: 'II. The Untamed Shores',
+      readGuide: 'Read Guide →',
+      exploreBay: 'Explore Bay →',
+      reserveNearby: 'Reserve Your Stay Nearby',
+      archiveBadge: 'From the Archives of Tinos',
+      metrics: [
+        {
+          figure: '40+',
+          label: 'Traditional Marble Villages',
+          detail: 'Connected by ancient stone footpaths',
+        },
+        {
+          figure: '750+',
+          label: 'Historic Cycladic Chapels',
+          detail: 'Dotting the hills & coastal cliffs',
+        },
+        {
+          figure: 'UNESCO',
+          label: 'Intangible Marble Heritage',
+          detail: 'Home of master sculptors in Pyrgos',
+        },
+        {
+          figure: '15 Min',
+          label: 'Ferry From Mykonos',
+          detail: 'Easy access, worlds away from crowds',
+        },
+      ],
     },
     reservation: {
       back: 'Return to Home',
       configTitle: 'STAY CONFIGURATION',
       configBadge: 'Direct Concierge • Best Rate Guaranteed',
-      numGuests: 'NUMBER OF GUESTS',
+      adultsLabel: 'ADULTS',
+      adultSingular: 'Adult',
+      adultsPlural: 'Adults',
+      childrenLabel: 'CHILDREN (UNDER 18)',
+      noChildren: 'No Children',
+      childSingular: 'Child',
+      childrenPlural: 'Children',
+      childAgeHeader: 'Age of Children at Check-In',
+      childAgeLabel: 'Child Age',
+      infantUnder1: 'Infant (Under 1 yr)',
+      yearOld: 'year old',
+      yearsOld: 'years old',
       arrivalTime: 'ESTIMATED ARRIVAL TIME',
+      lateArrival: 'Late Arrival (22:00+)',
       curatedCollection: 'CURATED COLLECTION:',
+      selectResidence: 'SELECT VILLA / RESIDENCE',
+      upToGuestsShort: 'Up to',
+      guestsWord: 'Guests',
       selectDates: 'SELECT CHECK-IN & CHECK-OUT DATES (14:00 / 11:00)',
+      selectDaysHeader: 'Select Check-In & Check-Out Days',
+      selectDatePrompt: 'Select Date',
+      unavailableDay: 'Unavailable / Closed',
+      weekDays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
       checkIn: 'CHECK-IN',
       checkOut: 'CHECK-OUT',
       fullName: 'FULL NAME',
+      fullNamePlaceholder: 'Full Name',
       email: 'EMAIL ADDRESS',
-      phone: 'PHONE / WHATSAPP NUMBER',
+      emailPlaceholder: 'name@email.com',
+      ssnLabel: 'SSN / NATIONAL ID / PASSPORT NUMBER',
+      ssnBadge: 'Encrypted Guest Registration',
+      ssnPlaceholder: 'Enter SSN, Tax ID, or Passport No. for hospitality registration',
+      phone: 'PHONE / WHATSAPP',
       specialRequests: 'SPECIAL REQUESTS (OPTIONAL)',
+      specialRequestsPlaceholder:
+        'Ferry arrival details, baby crib request, Early Bird 2027 inquiry, or special requests...',
       confirmBtn: 'CONFIRM RESERVATION REQUEST',
+      sending: 'Sending...',
       nights: 'Nights',
       night: 'Night',
+      perNight: '/night',
+      guestsSummaryLabel: 'Guests',
       welcomeIncluded: 'Welcome Fruit, Bubbly & Privileges Included',
-      directRate: 'Direct Concierge Rate',
+      directRate: 'Direct Sanctuary Rate',
+      otaRate: 'Standard OTA Channel Rate',
+      bookingRatingLabel: 'Booking.com Rating',
+      checkLiveBookingBtn: 'Or Check Live Calendar on Booking.com',
+      registeredBadge: 'Reservation Registered',
+      thankYouTitle: 'Thank You',
+      thankYouSub:
+        'Our Tinos concierge team has received your request and will confirm your stay shortly.',
+      residenceLabel: 'Residence',
+      arrivalWindowLabel: 'Arrival Window',
+      whatsappConciergeBtn: 'Priority WhatsApp Concierge',
       clearDates: 'Clear Dates',
       applyDates: 'Apply Dates',
+      countryPrefixes: [
+        { label: 'Greece (+30)', value: '+30' },
+        { label: 'Italy (+39)', value: '+39' },
+        { label: 'United Kingdom (+44)', value: '+44' },
+        { label: 'Albania (+355)', value: '+355' },
+        { label: 'United States (+1)', value: '+1' },
+        { label: 'Germany (+49)', value: '+49' },
+        { label: 'France (+33)', value: '+33' },
+        { label: 'Switzerland (+41)', value: '+41' },
+        { label: 'Australia (+61)', value: '+61' },
+      ],
     },
     footer: {
-      newsletterTitle: 'Receive Exclusive Offers & Tinos Dispatches',
-      newsletterSub: 'Sign up for our private dispatch to receive Early Bird openings and island guides.',
-      emailPlaceholder: 'Enter your email address',
-      subscribeBtn: 'Subscribe',
-      linksTitle: 'Links',
-      contactTitle: 'Contact',
-      addressTitle: 'Address',
-      home: 'Home',
+      sanctuaries: 'Sanctuaries',
+      information: 'Information',
+      contactAddress: 'Contact & Address',
       contact: 'Contact Us',
       media: 'Media Hub',
       cookies: 'Cookies Policy',
       privacy: 'Privacy Policy',
-      legal: 'Legal Notice',
+      legal: 'Legal Notice & Terms',
+      exclusiveTitle: 'Receive Exclusive Tinos Offers',
+      exclusiveSub:
+        'Sign up for seasonal privileges, early-bird villa releases, and curated island stories.',
+      subscribe: 'Subscribe',
+      thankYou: 'Thank You',
+      rights: 'ALL RIGHTS RESERVED.',
     },
   },
+
   it: {
     nav: {
       discoverTinos: 'SCOPRI TINOS',
@@ -126,95 +465,258 @@ export const TRANSLATIONS = {
       ourProperties: 'Le Nostre Dimore',
     },
     hero: {
+      trustedBy: 'Scelto da Ospiti che Amano l’Autentica Ospitalità Cicladica',
+      trustLine1: 'Scelto da Ospiti che Credono',
+      trustLine2: 'nell’Autentica Ospitalità Cicladica',
       luxuryLiving: 'Vivere di Lusso',
       redefined: 'Ridefinito',
-      titleLine1: 'Sopra il mare,',
-      titleLine2: 'dove ogni tramonto sembra',
-      titleLine3: 'appartenere solo a te.',
+      titleLine1: 'Scopri il perfetto',
+      titleLine2: 'equilibrio tra lusso e',
+      titleLine3: 'comfort sull’Isola di Tinos',
+      subtitle:
+        'Vivi una vacanza indimenticabile all’insegna del lusso cicladico e della serenità assoluta, sospeso sopra il Mar Egeo.',
       exploreBtn: 'Esplora le Dimore',
       reserveBtn: 'Prenota il Soggiorno',
     },
+    earlyBird: {
+      badge: 'EARLY BIRD 2027',
+      pillLabel: 'EARLY BIRD 2027',
+      title: 'La Tua Fuga a Tinos Inizia Qui',
+      description:
+        'Prenota il tuo soggiorno per il 2027 e approfitta delle nostre offerte esclusive Early Bird.',
+      button: 'Prenota Ora',
+      closeLabel: 'Chiudi offerta Early Bird',
+    },
     collection: {
-      eyebrow: 'Ville / Dimore',
+      eyebrow: 'DIMORE E SUITE',
       heading1: 'Dimore Curate',
       heading2: 'con Eleganza',
       subtext:
-        'Ogni residenza è progettata con comfort, stile cicladico e raffinatezza per offrirti un soggiorno indimenticabile a Tinos.',
-      viewAllBtn: 'Prenota una Dimora',
-      detailsEyebrow: 'Progettato per Comfort e Stile',
-      detailsTitle: 'Dettagli delle Dimore a Colpo d’Occhio',
-      explore: 'Esplora Dimora',
+        'Ogni residenza è progettata con comfort, stile cicladico e raffinatezza per offrirti un soggiorno indimenticabile sull’isola.',
+      reserveBtn: 'PRENOTA UNA DIMORA',
+      explore: 'ESPLORA DIMORA',
+      from: 'Da',
+      perNight: '/ Notte',
+      upToGuests: 'Fino a',
+      guests: 'Ospiti',
+      glanceEyebrow: 'PROGETTATE PER COMFORT E STILE',
+      glanceTitle: 'Dettagli delle Dimore a Colpo d’Occhio',
+      glanceBullets: [
+        'Piscina a Sfioro Privata e Lettini Solarium a Villa Leonora',
+        'A 12 Minuti a Piedi dalla Spiaggia Dorata alle Case di Andrea',
+        'Dotazioni di Benvenuto Gratuite e Parcheggio Privato in Loco',
+      ],
+      facilitiesTitle: 'Servizi e Dotazioni Complete delle Dimore',
+      facilitiesSub:
+        'Tutto ciò che è incluso nelle nostre residenze a Tinos per un soggiorno senza pensieri.',
+      specRows: [
+        { label: 'POSIZIONI A TINOS', value: 'Colline di Arnados e Costa di Agios Sostis' },
+        {
+          label: 'STILE ARCHITETTONICO',
+          value: 'Pietra di Tinos Scolpita a Mano e Archi Cicladici',
+        },
+        { label: 'SISTEMAZIONI', value: '3 Dimore Private (Fino a 5 Ospiti Ciascuna)' },
+        { label: 'BAGNI E SUITE', value: 'Bagni Ensuite in Marmo e Docce Walk-In Moderne' },
+        {
+          label: 'PISCINA PRIVATA E SPIAGGIA',
+          value: "Piscina a Sfioro (Villa Leonora) · 12 Min a Piedi dalla Spiaggia (Andrea's)",
+        },
+        {
+          label: 'SPAZI ESTERNI',
+          value: 'Terrazze Solarium Panoramiche, Giardini e BBQ all’Aperto',
+        },
+      ],
     },
     quoteHero: {
-      eyebrow: 'LA DESTINAZIONE',
       title: 'Perché Tinos?',
-      subtitle: 'AUTENTICA ESPERIENZA CICLADICA · MARMO, VENTO E BELLEZZA SELVAGGIA',
+      subtitle: 'AUTENTICA ESPERIENZA CICLADICA',
       button: 'Scopri Tinos',
     },
     about: {
-      eyebrow: 'Chi Siamo',
+      eyebrow: 'CHI SIAMO',
       title1: 'Vivi un Lusso',
       title2: 'Senza Paragoni',
-      p1: 'Vacation offre agli ospiti un’esperienza unica sull’isola di Tinos, unendo il comfort moderno alla raffinatezza senza tempo dell’Egeo.',
-      p2: 'Crediamo che il vero lusso si trovi nei silenzi: il gioco di luce sulla pietra di Tinos, il lino pregiato e la privacy assoluta di uno spazio pensato intorno all’orizzonte.',
-      button: 'Scopri di Più',
+      p1: 'Vacation offre agli ospiti un’esperienza esclusiva sull’Isola di Tinos, fondendo il comfort contemporaneo con l’eleganza senza tempo dell’Egeo.',
+      p2: 'Crediamo che il vero lusso si trovi nei silenzi: il gioco del sole sulla pietra di Tinos, le lenzuola in lino biologico e la privacy assoluta di uno spazio disegnato intorno all’orizzonte.',
+      button: 'SCOPRI DI PIÙ',
       stat1Val: '100%',
       stat1Label: 'NATURA INCONTAMINATA',
       stat2Val: '10 MIN',
       stat2Label: 'DA TINOS CHORA E PORTO',
       stat3Val: '11',
-      stat3Label: 'ISOLE ALL’ORIZZONTE',
+      stat3Label: 'ISOLE VISIBILI SULL’EGEO',
     },
     reviews: {
       eyebrow: '9.9 / 10 Eccezionale su Booking.com',
+      verifiedScorePrefix: 'Punteggio Verificato Booking.com',
       title: 'Esperienze degli Ospiti',
-      showMore: 'Espandi per Vedere Altre Recensioni',
+      showMore: 'Vedi Tutte le Recensioni',
       showLess: 'Mostra Meno Recensioni',
-      openWindow: 'Apri Recensioni su Booking.com',
+      openWindow: 'Verifica su Booking.com',
+    },
+    mediaHub: {
+      title: 'M E D I A   H U B',
+      subtitle: 'GLI ARCHIVI VISIVI DI VACATION',
+      allArchives: 'TUTTI GLI ARCHIVI',
+      tinosIsland: 'ISOLA DI TINOS',
+      villaLeonora: 'VILLA LEONORA',
+      andreasTraditional: 'CASA TRADIZIONALE DI ANDREA',
+      andreasTwoBed: 'CASA DUE CAMERE DI ANDREA',
+      backHome: 'Torna alla Home',
+    },
+    propertyPage: {
+      back: 'Torna alle Dimore',
+      highlights: 'Punti di Forza',
+      theStory: 'La Storia',
+      amenitiesTitle: 'Servizi Esclusivi',
+      distancesTitle: "Distanze sull'Isola",
+      reserveDirect: 'Prenota Diretto',
+      checkBooking: 'Verifica Disponibilità su Booking.com',
+      galleryCount: 'Foto',
+    },
+    tinosPage: {
+      back: 'Torna alle Dimore',
+      badge: 'L’Isola del Marmo e della Luce',
+      title: 'Tinos',
+      subtitle:
+        'La musa nascosta delle Cicladi.\nUn santuario di marmo, vento e bellezza selvaggia.',
+      introEyebrow: 'CICLADI AUTENTICHE',
+      introTitle: 'Un’isola custodita come un segreto tra artisti e intenditori',
+      introP1:
+        'Situata nel cuore delle Cicladi a soli 15 minuti di traghetto da Mykonos, Tinos incarna un fascino autentico e rilassato unico nel Mar Egeo.',
+      introP2:
+        'Su quest’isola ogni senso è amplificato dai suoi contrasti: dolci colline terrazzate contro i massi granitici lunari di Volax, l’arte del marmo patrimonio UNESCO a Pyrgos e spiagge dorate incontaminate.',
+      planBtn: 'Pianifica la Tua Fuga a Tinos',
+      compassEyebrow: 'BUSSOLA DELL’ISOLA',
+      compassTitle: 'Villaggi Sacri e Coste Incontaminate',
+      filterAll: 'Tutti i Luoghi',
+      filterVillages: 'Villaggi di Marmo',
+      filterBeaches: 'Spiagge dell’Egeo',
+      villagesHeading: 'I. I Villaggi Storici',
+      beachesHeading: 'II. Le Spiagge Incontaminate',
+      readGuide: 'Leggi Guida →',
+      exploreBay: 'Esplora Baia →',
+      reserveNearby: 'Prenota il Soggiorno Vicino',
+      archiveBadge: 'Dagli Archivi di Tinos',
+      metrics: [
+        {
+          figure: '40+',
+          label: 'Villaggi Tradizionali in Marmo',
+          detail: 'Collegati da antichi sentieri in pietra',
+        },
+        {
+          figure: '750+',
+          label: 'Cappelle Cicladiche Storiche',
+          detail: 'Incastonate tra colline e scogliere',
+        },
+        {
+          figure: 'UNESCO',
+          label: 'Patrimonio Immateriale del Marmo',
+          detail: 'Patria dei maestri scultori di Pyrgos',
+        },
+        {
+          figure: '15 Min',
+          label: 'Traghetto da Mykonos',
+          detail: 'Accesso rapido, lontano dalla folla',
+        },
+      ],
     },
     reservation: {
       back: 'Torna alla Home',
       configTitle: 'CONFIGURAZIONE SOGGIORNO',
       configBadge: 'Concierge Diretto • Miglior Tariffa Garantita',
-      numGuests: 'NUMERO DI OSPITI',
+      adultsLabel: 'ADULTI',
+      adultSingular: 'Adulto',
+      adultsPlural: 'Adulti',
+      childrenLabel: 'BAMBINI (SOTTO I 18 ANNI)',
+      noChildren: 'Nessun Bambino',
+      childSingular: 'Bambino',
+      childrenPlural: 'Bambini',
+      childAgeHeader: 'Età dei Bambini al Check-In',
+      childAgeLabel: 'Età Bambino',
+      infantUnder1: 'Neonato (< 1 anno)',
+      yearOld: 'anno',
+      yearsOld: 'anni',
       arrivalTime: 'ORARIO DI ARRIVO PREVISTO',
+      lateArrival: 'Arrivo Tardivo (22:00+)',
       curatedCollection: 'COLLEZIONE CURATA:',
+      selectResidence: 'SELEZIONA VILLA / DIMORA',
+      upToGuestsShort: 'Fino a',
+      guestsWord: 'Ospiti',
       selectDates: 'SELEZIONA DATE DI CHECK-IN E CHECK-OUT (14:00 / 11:00)',
+      selectDaysHeader: 'Seleziona Giorni di Check-In e Check-Out',
+      selectDatePrompt: 'Seleziona Data',
+      unavailableDay: 'Non disponibile / Chiuso',
+      weekDays: ['Do', 'Lu', 'Ma', 'Me', 'Gi', 'Ve', 'Sa'],
       checkIn: 'CHECK-IN',
       checkOut: 'CHECK-OUT',
       fullName: 'NOME E COGNOME',
+      fullNamePlaceholder: 'Nome e Cognome',
       email: 'INDIRIZZO EMAIL',
+      emailPlaceholder: 'name@email.com',
+      ssnLabel: 'CODICE FISCALE / DOCUMENTO D’IDENTITÀ / PASSAPORTO',
+      ssnBadge: 'Registrazione Ospiti Crittografata',
+      ssnPlaceholder:
+        'Inserisci Codice Fiscale, Carta d’Identità o Passaporto per la registrazione ospitalità',
       phone: 'TELEFONO / WHATSAPP',
       specialRequests: 'RICHIESTE SPECIALI (OPZIONALE)',
+      specialRequestsPlaceholder:
+        'Dettagli arrivo traghetto, richiesta culla, richiesta Early Bird 2027 o richieste speciali...',
       confirmBtn: 'CONFERMA RICHIESTA DI PRENOTAZIONE',
+      sending: 'Invio in corso...',
       nights: 'Notti',
       night: 'Notte',
+      perNight: '/notte',
+      guestsSummaryLabel: 'Ospiti',
       welcomeIncluded: 'Frutta Fresca, Bollicine e Privilegi di Benvenuto Inclusi',
-      directRate: 'Tariffa Diretta Concierge',
+      directRate: 'Tariffa Diretta Dimora',
+      otaRate: 'Tariffa Standard Portali OTA',
+      bookingRatingLabel: 'Valutazione Booking.com',
+      checkLiveBookingBtn: 'Oppure Verifica il Calendario su Booking.com',
+      registeredBadge: 'Prenotazione Registrata',
+      thankYouTitle: 'Grazie',
+      thankYouSub:
+        'Il nostro team concierge a Tinos ha ricevuto la tua richiesta e confermerà il soggiorno a breve.',
+      residenceLabel: 'Dimora',
+      arrivalWindowLabel: 'Fascia Oraria di Arrivo',
+      whatsappConciergeBtn: 'Concierge Prioritario WhatsApp',
       clearDates: 'Cancella Date',
       applyDates: 'Applica Date',
+      countryPrefixes: [
+        { label: 'Grecia (+30)', value: '+30' },
+        { label: 'Italia (+39)', value: '+39' },
+        { label: 'Regno Unito (+44)', value: '+44' },
+        { label: 'Albania (+355)', value: '+355' },
+        { label: 'Stati Uniti (+1)', value: '+1' },
+        { label: 'Germania (+49)', value: '+49' },
+        { label: 'Francia (+33)', value: '+33' },
+        { label: 'Svizzera (+41)', value: '+41' },
+        { label: 'Australia (+61)', value: '+61' },
+      ],
     },
     footer: {
-      newsletterTitle: 'Ricevi Offerte Esclusive e Novità da Tinos',
-      newsletterSub: 'Iscriviti per ricevere in anteprima le aperture Early Bird e i consigli sull’isola.',
-      emailPlaceholder: 'Inserisci il tuo indirizzo email',
-      subscribeBtn: 'Iscriviti',
-      linksTitle: 'Link Rapidi',
-      contactTitle: 'Contatti',
-      addressTitle: 'Indirizzo',
-      home: 'Home',
+      sanctuaries: 'Dimore',
+      information: 'Informazioni',
+      contactAddress: 'Contatti e Indirizzo',
       contact: 'Contattaci',
       media: 'Archivio Media',
       cookies: 'Politica sui Cookie',
       privacy: 'Informativa sulla Privacy',
-      legal: 'Note Legali',
+      legal: 'Note Legali e Termini',
+      exclusiveTitle: 'Ricevi Offerte Esclusive per Tinos',
+      exclusiveSub:
+        'Iscriviti per privilegi stagionali, aperture Early Bird e storie sull’isola.',
+      subscribe: 'Iscriviti',
+      thankYou: 'Grazie',
+      rights: 'TUTTI I DIRITTI RISERVATI.',
     },
   },
+
   el: {
     nav: {
       discoverTinos: 'ΑΝΑΚΑΛΥΨΤΕ ΤΗΝ ΤΗΝΟ',
       contactUs: 'ΕΠΙΚΟΙΝΩΝΙΑ',
-      andreasHouse: 'ANDREA’S HOUSE',
+      andreasHouse: "ANDREA'S HOUSE",
       traditionalHouse: 'Παραδοσιακή Οικία',
       traditionalSub: 'Εκλεπτυσμένη Παράδοση',
       twoBedHouse: 'Οικία Δύο Υπνοδωματίων',
@@ -226,88 +728,257 @@ export const TRANSLATIONS = {
       ourProperties: 'Οι Κατοικίες Μας',
     },
     hero: {
+      trustedBy:
+        'Η Επιλογή των Επισκεπτών που Αναζητούν Αυθεντική Κυκλαδίτικη Φιλοξενία',
+      trustLine1: 'Η Επιλογή των Επισκεπτών που Αγαπούν',
+      trustLine2: 'την Αυθεντική Κυκλαδίτικη Φιλοξενία',
       luxuryLiving: 'Πολυτελής Διαβίωση',
       redefined: 'Επαναπροσδιορισμένη',
-      titleLine1: 'Πάνω από τη θάλασσα,',
-      titleLine2: 'εκεί που κάθε ηλιοβασίλεμα',
-      titleLine3: 'ανήκει μόνο σε εσάς.',
+      titleLine1: 'Ανακαλύψτε τον τέλειο',
+      titleLine2: 'συνδυασμό πολυτέλειας &',
+      titleLine3: 'άνεσης στην Τήνο',
+      subtitle:
+        'Απολαύστε τις διακοπές σας και ζήστε την απόλυτη κυκλαδίτικη πολυτέλεια και ηρεμία πάνω από το Αιγαίο Πέλαγος.',
       exploreBtn: 'Εξερευνήστε τις Κατοικίες',
       reserveBtn: 'Κάντε Κράτηση',
     },
+    earlyBird: {
+      badge: 'EARLY BIRD 2027',
+      pillLabel: 'ΠΡΟΣΦΟΡΑ 2027',
+      title: 'Η Απόδρασή σας στην Τήνο Ξεκινά Εδώ',
+      description:
+        'Κλείστε τη διαμονή σας για το 2027 και επωφεληθείτε από τις αποκλειστικές προσφορές προκράτησης Early Bird.',
+      button: 'Κράτηση Τώρα',
+      closeLabel: 'Κλείσιμο προσφοράς Early Bird',
+    },
     collection: {
-      eyebrow: 'Κατοικίες / Βίλες',
+      eyebrow: 'ΚΑΤΟΙΚΙΕΣ & ΣΟΥΙΤΕΣ',
       heading1: 'Κομψά Επιμελημένες',
       heading2: 'Κατοικίες',
       subtext:
-        'Κάθε κατοικία έχει σχεδιαστεί με άνεση, κυκλαδίτικο στυλ και υψηλή αισθητική για μια αξέχαστη διαμονή στην Τήνο.',
-      viewAllBtn: 'Κράτηση Κατοικίας',
-      detailsEyebrow: 'Σχεδιασμένα για Άνεση & Στυλ',
-      detailsTitle: 'Στοιχεία Κατοικιών με μια Ματιά',
-      explore: 'Εξερευνήστε',
+        'Κάθε κατοικία έχει σχεδιαστεί με άνεση, κυκλαδίτικο στυλ και υψηλή αισθητική για μια αξέχαστη διαμονή στο νησί.',
+      reserveBtn: 'ΚΡΑΤΗΣΗ ΚΑΤΟΙΚΙΑΣ',
+      explore: 'ΕΞΕΡΕΥΝΗΣΤΕ',
+      from: 'Από',
+      perNight: '/ Βράδυ',
+      upToGuests: 'Έως',
+      guests: 'Επισκέπτες',
+      glanceEyebrow: 'ΣΧΕΔΙΑΣΜΕΝΕΣ ΓΙΑ ΑΝΕΣΗ & ΣΤΥΛ',
+      glanceTitle: 'Στοιχεία Κατοικιών με μια Ματιά',
+      glanceBullets: [
+        'Ιδιωτική Πισίνα Infinity & Ξαπλώστρες στη Villa Leonora',
+        '12 Λεπτά Πεζοπορία από τη Χρυσή Αμμουδιά στις Κατοικίες Andrea',
+        'Δωρεάν Προϊόντα Καλωσορίσματος & Ιδιωτικό Parking',
+      ],
+      facilitiesTitle: 'Πλήρεις Παροχές & Εγκαταστάσεις Κατοικιών',
+      facilitiesSub:
+        'Όλα όσα περιλαμβάνονται στις κατοικίες μας στην Τήνο για μια ξέγνοιαστη διαμονή.',
+      specRows: [
+        { label: 'ΤΟΠΟΘΕΣΙΕΣ ΣΤΗΝ ΤΗΝΟ', value: 'Λόφοι Αρνάδου & Ακτή Αγίου Σώστη' },
+        {
+          label: 'ΑΡΧΙΤΕΚΤΟΝΙΚΟ ΣΤΥΛ',
+          value: 'Χειροποίητη Τηνιακή Πέτρα & Κυκλαδίτικες Καμάρες',
+        },
+        {
+          label: 'ΚΑΤΟΙΚΙΕΣ',
+          value: '3 Ιδιωτικές Κατοικίες (Έως 5 Επισκέπτες η καθεμία)',
+        },
+        {
+          label: 'ΜΠΑΝΙΑ & ΣΟΥΙΤΕΣ',
+          value: 'Ensuite Μαρμάρινα Μπάνια & Μοντέρνα Ντους',
+        },
+        {
+          label: 'ΙΔΙΩΤΙΚΗ ΠΙΣΙΝΑ & ΠΑΡΑΛΙΑ',
+          value:
+            "Πισίνα Infinity (Villa Leonora) · 12 Λεπτά Πεζοπορία από την Παραλία (Andrea's)",
+        },
+        {
+          label: 'ΕΞΩΤΕΡΙΚΟΙ ΧΩΡΟΙ',
+          value: 'Πανοραμικές Ηλιόλουστες Βεράντες, Κήποι & Εξωτερικό BBQ',
+        },
+      ],
     },
     quoteHero: {
-      eyebrow: 'Ο ΠΡΟΟΡΙΣΜΟΣ',
       title: 'Γιατί στην Τήνο;',
-      subtitle: 'ΑΥΘΕΝΤΙΚΗ ΚΥΚΛΑΔΙΤΙΚΗ ΕΜΠΕΙΡΙΑ · ΜΑΡΜΑΡΟ, ΑΝΕΜΟΣ & ΑΓΡΙΑ ΟΜΟΡΦΙΑ',
+      subtitle: 'ΑΥΘΕΝΤΙΚΗ ΚΥΚΛΑΔΙΤΙΚΗ ΕΜΠΕΙΡΙΑ',
       button: 'Ανακαλύψτε την Τήνο',
     },
     about: {
-      eyebrow: 'Σχετικά με Εμάς',
-      title1: 'Ζήστε την Απόλυτη',
-      title2: 'Κυκλαδίτικη Πολυτέλεια',
-      p1: 'Το Vacation προσφέρει στους επισκέπτες μια ασύγκριτη εμπειρία φιλοξενίας στην Τήνο, συνδυάζοντας τη σύγχρονη άνεση με τη διαχρονική κομψότητα του Αιγαίου.',
-      p2: 'Πιστεύουμε ότι η αληθινή πολυτέλεια βρίσκεται στις ήρεμες στιγμές—στο παιχνίδι του φωτός πάνω στην τηνιακή πέτρα, στα εκλεκτά λινά και στην απόλυτη ιδιωτικότητα.',
-      button: 'Περισσότερα',
+      eyebrow: 'ΣΧΕΤΙΚΑ ΜΕ ΕΜΑΣ',
+      title1: 'Ζήστε Ασύγκριτη',
+      title2: 'Πολυτέλεια',
+      p1: 'Το Vacation προσφέρει στους επισκέπτες μια μοναδική εμπειρία κυκλαδίτικης φιλοξενίας στην Τήνο, συνδυάζοντας τη σύγχρονη άνεση με τη διαχρονική αισθητική του Αιγαίου.',
+      p2: 'Πιστεύουμε ότι η αληθινή πολυτέλεια κρύβεται στις ήρεμες στιγμές—στο παιχνίδι του ήλιου πάνω στην τηνιακή πέτρα, στα οργανικά λινά και στην απόλυτη ιδιωτικότητα.',
+      button: 'ΑΝΑΚΑΛΥΨΤΕ ΠΕΡΙΣΣΟΤΕΡΑ',
       stat1Val: '100%',
       stat1Label: 'ΦΥΣΙΚΟ ΠΕΡΙΒΑΛΛΟΝ',
       stat2Val: '10 ΛΕΠΤΑ',
       stat2Label: 'ΑΠΟ ΤΗ ΧΩΡΑ & ΤΟ ΛΙΜΑΝΙ',
       stat3Val: '11',
-      stat3Label: 'ΝΗΣΙΑ ΣΤΟΝ ΟΡΙΖΟΝΤΑ',
+      stat3Label: 'ΘΕΑ ΣΕ 11 ΝΗΣΙΑ ΤΟΥ ΑΙΓΑΙΟΥ',
     },
     reviews: {
       eyebrow: '9.9 / 10 Άριστο στην Booking.com',
+      verifiedScorePrefix: 'Επιβεβαιωμένη Βαθμολογία Booking.com',
       title: 'Εμπειρίες Επισκεπτών',
-      showMore: 'Δείτε Περισσότερες Κριτικές',
+      showMore: 'Δείτε Όλες τις Κριτικές',
       showLess: 'Δείτε Λιγότερες Κριτικές',
-      openWindow: 'Άνοιγμα Κριτικών στην Booking.com',
+      openWindow: 'Επιβεβαίωση στην Booking.com',
+    },
+    mediaHub: {
+      title: 'M E D I A   H U B',
+      subtitle: 'ΟΠΤΙΚΟ ΑΡΧΕΙΟ VACATION TINOS',
+      allArchives: 'ΟΛΟ ΤΟ ΑΡΧΕΙΟ',
+      tinosIsland: 'ΝΗΣΙ ΤΗΝΟΣ',
+      villaLeonora: 'VILLA LEONORA',
+      andreasTraditional: 'ΠΑΡΑΔΟΣΙΑΚΗ ΟΙΚΙΑ ANDREA',
+      andreasTwoBed: 'ΟΙΚΙΑ ΔΥΟ ΥΠΝΟΔΩΜΑΤΙΩΝ ANDREA',
+      backHome: 'Επιστροφή στην Αρχική',
+    },
+    propertyPage: {
+      back: 'Επιστροφή στις Κατοικίες',
+      highlights: 'Κύρια Χαρακτηριστικά',
+      theStory: 'Η Ιστορία',
+      amenitiesTitle: 'Παροχές & Ανέσεις',
+      distancesTitle: 'Αποστάσεις στο Νησί',
+      reserveDirect: 'Απευθείας Κράτηση',
+      checkBooking: 'Έλεγχος Διαθεσιμότητας στην Booking.com',
+      galleryCount: 'Φωτογραφίες',
+    },
+    tinosPage: {
+      back: 'Επιστροφή στις Κατοικίες',
+      badge: 'Το Νησί του Μαρμάρου & του Φωτός',
+      title: 'Τήνος',
+      subtitle:
+        'Η κρυφή μούσα των Κυκλάδων.\nΈνα καταφύγιο μαρμάρου, ανέμου και άγριας ομορφιάς.',
+      introEyebrow: 'ΑΥΘΕΝΤΙΚΕΣ ΚΥΚΛΑΔΕΣ',
+      introTitle: 'Ένα νησί-μυστικό ανάμεσα σε καλλιτέχνες και λάτρεις της ποιότητας',
+      introP1:
+        'Στην καρδιά των Κυκλάδων, μόλις 15 λεπτά με το πλοίο από τη Μύκονο, η Τήνος εκφράζει μια αυθεντική, γήινη κομψότητα που δεν συναντάται πουθενά αλλού στο Αιγαίο.',
+      introP2:
+        'Σε αυτό το νησί όλες οι αισθήσεις απογειώνονται: καταπράσινες αναβαθμίδες δίπλα στους σεληνιακούς γρανιτένιους βράχους του Βώλακα, μαρμαροτεχνία UNESCO στον Πύργο και χρυσές αμμουδιές.',
+      planBtn: 'Οργανώστε την Απόδρασή σας',
+      compassEyebrow: 'ΠΥΞΙΔΑ ΤΟΥ ΝΗΣΙΟΥ',
+      compassTitle: 'Ιερά Χωριά & Παρθένες Ακτές',
+      filterAll: 'Όλα τα Αξιοθέατα',
+      filterVillages: 'Μαρμάρινα Χωριά',
+      filterBeaches: 'Παραλίες Αιγαίου',
+      villagesHeading: 'I. Τα Ιστορικά Χωριά',
+      beachesHeading: 'II. Οι Παρθένες Παραλίες',
+      readGuide: 'Διαβάστε τον Οδηγό →',
+      exploreBay: 'Εξερευνήστε τον Κόλπο →',
+      reserveNearby: 'Κάντε Κράτηση Κοντά',
+      archiveBadge: 'Από το Αρχείο της Τήνου',
+      metrics: [
+        {
+          figure: '40+',
+          label: 'Παραδοσιακά Μαρμάρινα Χωριά',
+          detail: 'Συνδεδεμένα με αρχαία λιθόστρωτα μονοπάτια',
+        },
+        {
+          figure: '750+',
+          label: 'Ιστορικά Κυκλαδίτικα Ξωκλήσια',
+          detail: 'Σπαρμένα στους λόφους και τις ακτές',
+        },
+        {
+          figure: 'UNESCO',
+          label: 'Άυλη Κληρονομιά Μαρμαροτεχνίας',
+          detail: 'Γενέτειρα κορυφαίων γλυπτών στον Πύργο',
+        },
+        {
+          figure: '15 Min',
+          label: 'Με Πλοίο από τη Μύκονο',
+          detail: 'Εύκολη πρόσβαση, μακριά από την πολυκοσμία',
+        },
+      ],
     },
     reservation: {
       back: 'Επιστροφή στην Αρχική',
       configTitle: 'ΔΙΑΜΟΡΦΩΣΗ ΔΙΑΜΟΝΗΣ',
       configBadge: 'Άμεσο Concierge • Εγγύηση Καλύτερης Τιμής',
-      numGuests: 'ΑΡΙΘΜΟΣ ΕΠΙΣΚΕΠΤΩΝ',
+      adultsLabel: 'ΕΝΗΛΙΚΕΣ',
+      adultSingular: 'Ενήλικας',
+      adultsPlural: 'Ενήλικες',
+      childrenLabel: 'ΠΑΙΔΙΑ (ΚΑΤΩ ΤΩΝ 18)',
+      noChildren: 'Χωρίς Παιδιά',
+      childSingular: 'Παιδί',
+      childrenPlural: 'Παιδιά',
+      childAgeHeader: 'Ηλικία Παιδιών κατά το Check-In',
+      childAgeLabel: 'Ηλικία Παιδιού',
+      infantUnder1: 'Βρέφος (< 1 έτους)',
+      yearOld: 'έτους',
+      yearsOld: 'ετών',
       arrivalTime: 'ΕΚΤΙΜΩΜΕΝΗ ΩΡΑ ΑΦΙΞΗΣ',
+      lateArrival: 'Αργή Άφιξη (22:00+)',
       curatedCollection: 'ΕΠΙΛΟΓΗ ΚΑΤΟΙΚΙΑΣ:',
+      selectResidence: 'ΕΠΙΛΕΞΤΕ ΒΙΛΑ / ΚΑΤΟΙΚΙΑ',
+      upToGuestsShort: 'Έως',
+      guestsWord: 'Επισκέπτες',
       selectDates: 'ΕΠΙΛΕΞΤΕ ΗΜΕΡΟΜΗΝΙΕΣ CHECK-IN & CHECK-OUT (14:00 / 11:00)',
+      selectDaysHeader: 'Επιλέξτε Ημέρες Check-In & Check-Out',
+      selectDatePrompt: 'Επιλέξτε Ημερομηνία',
+      unavailableDay: 'Μη Διαθέσιμο / Κλειστό',
+      weekDays: ['Κυ', 'Δε', 'Τρ', 'Τε', 'Πε', 'Πα', 'Σα'],
       checkIn: 'ΑΦΙΞΗ (CHECK-IN)',
       checkOut: 'ΑΝΑΧΩΡΗΣΗ (CHECK-OUT)',
       fullName: 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ',
+      fullNamePlaceholder: 'Ονοματεπώνυμο',
       email: 'ΔΙΕΥΘΥΝΣΗ EMAIL',
+      emailPlaceholder: 'name@email.com',
+      ssnLabel: 'ΑΦΜ / ΑΡΙΘΜΟΣ ΤΑΥΤΟΤΗΤΑΣ / ΔΙΑΒΑΤΗΡΙΟΥ',
+      ssnBadge: 'Κρυπτογραφημένη Εγγραφή Επισκέπτη',
+      ssnPlaceholder:
+        'Εισάγετε ΑΦΜ, Ταυτότητα ή Αριθμό Διαβατηρίου για την καταχώρηση φιλοξενίας',
       phone: 'ΤΗΛΕΦΩΝΟ / WHATSAPP',
       specialRequests: 'ΕΙΔΙΚΑ ΑΙΤΗΜΑΤΑ (ΠΡΟΑΙΡΕΤΙΚΑ)',
+      specialRequestsPlaceholder:
+        'Στοιχεία άφιξης πλοίου, αίτημα για παρκοκρέβατο, κράτηση Early Bird 2027 ή ειδικά αιτήματα...',
       confirmBtn: 'ΕΠΙΒΕΒΑΙΩΣΗ ΑΙΤΗΜΑΤΟΣ ΚΡΑΤΗΣΗΣ',
+      sending: 'Αποστολή...',
       nights: 'Διανυκτερεύσεις',
       night: 'Διανυκτέρευση',
+      perNight: '/βράδυ',
+      guestsSummaryLabel: 'Επισκέπτες',
       welcomeIncluded: 'Περιλαμβάνονται Φρούτα, Αφρώδης Οίνος & Προνόμια Υποδοχής',
       directRate: 'Προνομιακή Τιμή Απευθείας Κράτησης',
+      otaRate: 'Τυπική Τιμή Πλατφόρμας OTA',
+      bookingRatingLabel: 'Βαθμολογία Booking.com',
+      checkLiveBookingBtn: 'Ή Δείτε το Ημερολόγιο στην Booking.com',
+      registeredBadge: 'Το Αίτημα Καταχωρήθηκε',
+      thankYouTitle: 'Σας Ευχαριστούμε',
+      thankYouSub:
+        'Η ομάδα μας στην Τήνο έλαβε το αίτημά σας και θα επικοινωνήσει σύντομα για την επιβεβαίωση της διαμονής σας.',
+      residenceLabel: 'Κατοικία',
+      arrivalWindowLabel: 'Ώρα Άφιξης',
+      whatsappConciergeBtn: 'Άμεση Επιβεβαίωση μέσω WhatsApp',
       clearDates: 'Καθαρισμός',
       applyDates: 'Εφαρμογή',
+      countryPrefixes: [
+        { label: 'Ελλάδα (+30)', value: '+30' },
+        { label: 'Ιταλία (+39)', value: '+39' },
+        { label: 'Ηνωμένο Βασίλειο (+44)', value: '+44' },
+        { label: 'Αλβανία (+355)', value: '+355' },
+        { label: 'Ηνωμένες Πολιτείες (+1)', value: '+1' },
+        { label: 'Γερμανία (+49)', value: '+49' },
+        { label: 'Γαλλία (+33)', value: '+33' },
+        { label: 'Ελβετία (+41)', value: '+41' },
+        { label: 'Αυστραλία (+61)', value: '+61' },
+      ],
     },
     footer: {
-      newsletterTitle: 'Λάβετε Αποκλειστικές Προσφορές & Νέα από την Τήνο',
-      newsletterSub: 'Εγγραφείτε για προτεραιότητα στις κρατήσεις Early Bird και προτάσεις για το νησί.',
-      emailPlaceholder: 'Εισάγετε το email σας',
-      subscribeBtn: 'Εγγραφή',
-      linksTitle: 'Σύνδεσμοι',
-      contactTitle: 'Επικοινωνία',
-      addressTitle: 'Διεύθυνση',
-      home: 'Αρχική',
+      sanctuaries: 'Κατοικίες',
+      information: 'Πληροφορίες',
+      contactAddress: 'Επικοινωνία & Διεύθυνση',
       contact: 'Επικοινωνία',
       media: 'Media Hub',
       cookies: 'Πολιτική Cookies',
       privacy: 'Πολιτική Απορρήτου',
-      legal: 'Νομική Σημείωση',
+      legal: 'Νομική Σημείωση & Όροι',
+      exclusiveTitle: 'Λάβετε Αποκλειστικές Προσφορές για την Τήνο',
+      exclusiveSub: 'Εγγραφείτε για εποχικά προνόμια και προτεραιότητα κρατήσεων.',
+      subscribe: 'Εγγραφή',
+      thankYou: 'Ευχαριστούμε',
+      rights: 'ΜΕ ΕΠΙΦΥΛΑΞΗ ΠΑΝΤΟΣ ΔΙΚΑΙΩΜΑΤΟΣ.',
     },
   },
 };
@@ -319,7 +990,30 @@ const LanguageContext = createContext({
 });
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState('en');
+  const [lang, setLangState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vacation_lang');
+      return saved && TRANSLATIONS[saved] ? saved : 'en';
+    } catch {
+      return 'en';
+    }
+  });
+
+  const setLang = (nextLang) => {
+    if (!TRANSLATIONS[nextLang]) return;
+    setLangState(nextLang);
+    try {
+      localStorage.setItem('vacation_lang', nextLang);
+      document.documentElement.lang = nextLang;
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   return createElement(LanguageContext.Provider, { value: { lang, setLang, t } }, children);
 }
@@ -334,8 +1028,10 @@ export const PROPERTIES = {
     name: 'Villa Leonora',
     navLabel: 'Villa Leonora',
     navSubtitle: 'Coastal Luxury',
-    badge: 'Private Pool Villa',
-    subtitle: 'Panoramic Infinity Pool Sanctuary · Arnados, Tinos',
+    maxGuestsCount: 4,
+    shortOptionTitle: 'Private Infinity Pool Sanctuary',
+    badge: 'Flagship Sanctuary',
+    subtitle: 'Panoramic Infinity Pool Villa · Arnados, Tinos',
     location: 'Arnados Hills · 10 mins from Tinos Town',
     rating: '9.9',
     ratingLabel: 'Exceptional',
@@ -348,9 +1044,9 @@ export const PROPERTIES = {
       { label: 'Views', value: '11 Cycladic Islands' },
     ],
     description:
-      'Crafted high in the hills of Arnados with locally quarried Tinos stone, this single-storey sanctuary blends effortlessly into the Cycladic landscape. Sliding double doors open to a private infinity pool and sun terrace commanding uninterrupted views over Chora harbor and across the Aegean to 11 surrounding islands, including Mykonos and Santorini.',
+      'Crafted high in the hills of Arnados with locally quarried Tinos stone by Andreas Lekasi and named after his wife Leonora, this single-storey sanctuary blends effortlessly into the Cycladic landscape. Sliding double doors open to a private infinity pool and sun terrace commanding uninterrupted views over Chora harbor and across the Aegean to 11 surrounding islands, including Mykonos and Santorini.',
     story:
-      'From dazzling azure mornings where neighboring islands feel within reach to velvet evenings lit by village constellations, Villa Leonora is designed for unhurried living. Guests are warmly welcomed with fresh local fruits, a chilled bottle of bubbly by the pool, and curated first-breakfast provisions.',
+      'From dazzling azure mornings where neighboring islands feel within reach to velvet evenings lit by village constellations, Villa Leonora is designed for unhurried living. Family-owned and warmly hosted by Theodora, Leo, and John, guests are welcomed with fresh local fruits, a chilled bottle of bubbly by the pool, and curated first-breakfast provisions.',
     amenities: [
       'Private Outdoor Infinity Pool',
       '180° Aegean & 11-Island Views',
@@ -363,7 +1059,6 @@ export const PROPERTIES = {
       'Air Conditioning & Heating',
       'Complimentary Welcome Provisions',
       'Free Private On-Site Parking',
-      'Pet-Friendly Sanctuary',
     ],
     distances: [
       { place: 'Tinos Town (Chora) & Port', time: '10 min drive (7 km)' },
@@ -371,10 +1066,104 @@ export const PROPERTIES = {
       { place: 'Kampos & Steni Villages', time: '8 min drive' },
       { place: 'Agios Sostis & Kionia Beaches', time: '12 min drive' },
     ],
+    translations: {
+      el: {
+        name: 'Villa Leonora',
+        navLabel: 'Villa Leonora',
+        navSubtitle: 'Παράκτια Πολυτέλεια',
+        shortOptionTitle: 'Καταφύγιο με Ιδιωτική Πισίνα Infinity',
+        badge: 'Κορυφαίο Καταφύγιο',
+        subtitle: 'Βίλα με Πανοραμική Πισίνα Infinity · Αρνάδος, Τήνος',
+        location: 'Λόφοι Αρνάδου · 10 λεπτά από τη Χώρα Τήνου',
+        ratingLabel: 'Άριστο',
+        reviewCount: '34 Επιβεβαιωμένες Κριτικές',
+        highlights: [
+          'Ιδιωτική Πισίνα Infinity',
+          'Θέα σε 11 Νησιά',
+          '2 Υπνοδωμάτια Ensuite',
+          'Δωρεάν Parking',
+        ],
+        specs: [
+          { label: 'Χωρητικότητα', value: 'Έως 4 Επισκέπτες' },
+          { label: 'Υπνοδωμάτια', value: '2 King Ensuite' },
+          { label: 'Πισίνα', value: 'Ιδιωτική Πισίνα Infinity' },
+          { label: 'Θέα', value: '11 Κυκλαδονήσια' },
+        ],
+        description:
+          'Χτισμένη ψηλά στους λόφους του Αρνάδου με τοπική τηνιακή πέτρα από τον Ανδρέα Λεκάση και αφιερωμένη στη σύζυγό του Λεονώρα, αυτή η ισόγεια κατοικία ενσωματώνεται αρμονικά στο κυκλαδίτικο τοπίο. Οι συρόμενες μπαλκονόπορτες οδηγούν στην ιδιωτική πισίνα infinity και την ηλιόλουστη βεράντα με ανεμπόδιστη θέα στο λιμάνι της Χώρας και σε 11 νησιά του Αιγαίου, συμπεριλαμβανομένων της Μυκόνου και της Σαντορίνης.',
+        story:
+          'Από τα φωτεινά πρωινά του Αιγαίου μέχρι τις βελούδινες βραδιές κάτω από τα αστέρια, η Villa Leonora είναι σχεδιασμένη για απόλυτη χαλάρωση. Με τη ζεστή οικογενειακή φιλοξενία της Θεοδώρας, του Λεό και του Γιάννη, οι επισκέπτες καλωσορίζονται με φρέσκα φρούτα, παγωμένο αφρώδη οίνο δίπλα στην πισίνα και εκλεκτά προϊόντα πρωινού.',
+        amenities: [
+          'Ιδιωτική Εξωτερική Πισίνα Infinity',
+          'Πανοραμική Θέα 180° στο Αιγαίο & σε 11 Νησιά',
+          'Ηλιόλουστη Βεράντα με 4 Πολυτελείς Ξαπλώστρες',
+          'Εξωτερική Τραπεζαρία & BBQ',
+          'Εξωτερικό Ντους Πισίνας',
+          '2 Υπνοδωμάτια Ensuite με Υπέρδιπλα Κρεβάτια',
+          'Πλήρως Εξοπλισμένη Κουζίνα (Πλυντήριο Πιάτων & Φούρνος)',
+          'Υψηλής Ταχύτητας Wi-Fi & Smart TV',
+          'Κλιματισμός & Θέρμανση',
+          'Δωρεάν Προϊόντα Καλωσορίσματος',
+          'Δωρεάν Ιδιωτικός Χώρος Στάθμευσης',
+        ],
+        distances: [
+          { place: 'Χώρα Τήνου & Λιμάνι', time: '10 λεπτά οδικώς (7 χλμ.)' },
+          { place: 'Παραδοσιακός Οικισμός Αρνάδου', time: '2 λεπτά με τα πόδια' },
+          { place: 'Χωριά Κάμπος & Στενή', time: '8 λεπτά οδικώς' },
+          { place: 'Παραλίες Άγιος Σώστης & Κιόνια', time: '12 λεπτά οδικώς' },
+        ],
+      },
+      it: {
+        name: 'Villa Leonora',
+        navLabel: 'Villa Leonora',
+        navSubtitle: 'Lusso Costiero',
+        shortOptionTitle: 'Santuario con Piscina a Sfioro Privata',
+        badge: 'Santuario Ammiraglia',
+        subtitle: 'Villa Panoramica con Piscina Infinity · Arnados, Tinos',
+        location: 'Colline di Arnados · 10 min da Tinos Chora',
+        ratingLabel: 'Eccezionale',
+        reviewCount: '34 Recensioni Verificate',
+        highlights: [
+          'Piscina Infinity Privata',
+          'Panorama su 11 Isole',
+          '2 Camere Ensuite',
+          'Parcheggio Gratuito',
+        ],
+        specs: [
+          { label: 'Capienza', value: 'Fino a 4 Ospiti' },
+          { label: 'Camere', value: '2 Suite Matrimoniali King' },
+          { label: 'Piscina', value: 'Infinity Privata' },
+          { label: 'Vista', value: '11 Isole Cicladi' },
+        ],
+        description:
+          'Realizzata sulle colline di Arnados con pietra locale di Tinos da Andreas Lekasi e dedicata a sua moglie Leonora, questa dimora su un unico livello si fonde armoniosamente con il paesaggio cicladico. Le ampie vetrate scorrevoli si aprono su una piscina a sfioro privata e una terrazza solarium con vista ininterrotta sul porto di Chora e su 11 isole dell’Egeo, tra cui Mykonos e Santorini.',
+        story:
+          'Dalle luminose mattine azzurre alle sere vellutate illuminate dalle costellazioni, Villa Leonora è pensata per il relax assoluto. Gestita con calore familiare da Theodora, Leo e John, accoglie gli ospiti con frutta fresca locale, bollicine fresche a bordo piscina e prodotti selezionati per la prima colazione.',
+        amenities: [
+          'Piscina Esterna a Sfioro Privata',
+          'Vista Panoramica a 180° su Egeo e 11 Isole',
+          'Terrazza Solarium con 4 Lettini',
+          'Zona Pranzo all’Aperto e BBQ',
+          'Doccia Esterna a Bordo Piscina',
+          '2 Camere con Bagno Privato e Letti King',
+          'Cucina Completa da Chef (Lavastoviglie e Forno)',
+          'Wi-Fi ad Alta Velocità e Smart TV',
+          'Aria Condizionata e Riscaldamento',
+          'Dotazioni di Benvenuto Gratuite',
+          'Parcheggio Privato Gratuito in Loco',
+        ],
+        distances: [
+          { place: 'Tinos Chora e Porto', time: '10 min in auto (7 km)' },
+          { place: 'Villaggio Tradizionale di Arnados', time: '2 min a piedi' },
+          { place: 'Villaggi di Kampos e Steni', time: '8 min in auto' },
+          { place: 'Spiagge di Agios Sostis e Kionia', time: '12 min in auto' },
+        ],
+      },
+    },
     bookingLink:
-      'https://www.booking.com/hotel/gr/villa-leonora-tinos.html?aid=898224&label=hotel_details-KNEigd4%401777400372&sid=460e206a28afa890ba9a72f29bcece90&checkin=2026-05-14&checkout=2026-05-15&dist=0&from_sn=ios&group_adults=2&group_children=0&keep_landing=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA%2C&sb_price_type=total&type=total&',
+      'https://www.booking.com/hotel/gr/villa-leonora-tinos.html?aid=898224&label=hotel_details-KNEigd4%401777400372',
     reviewsLink:
-      'https://www.booking.com/hotel/gr/villa-leonora-tinos.html?aid=898224&label=hotel_details-KNEigd4%401777400372&sid=460e206a28afa890ba9a72f29bcece90&checkin=2026-05-14&checkout=2026-05-15&dist=0&from_sn=ios&group_adults=2&group_children=0&keep_landing=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA%2C&sb_price_type=total&type=total&#tab-reviews',
+      'https://www.booking.com/hotel/gr/villa-leonora-tinos.html?aid=898224&label=hotel_details-KNEigd4%401777400372#tab-reviews',
     coverImage: '/images/properties/villa-leonora/image00016.webp',
     gallery: [
       '/images/properties/villa-leonora/image00016.webp',
@@ -402,7 +1191,9 @@ export const PROPERTIES = {
     name: "Andrea's Traditional House",
     navLabel: 'Traditional House',
     navSubtitle: 'Tradition Refined',
-    badge: 'Cycladic Stone House',
+    maxGuestsCount: 3,
+    shortOptionTitle: 'Cycladic Haven',
+    badge: 'Couples & Small Families',
     subtitle: 'Authentic Cycladic Haven · Agios Sostis, Tinos',
     location: 'Agios Sostis · 12 min walk to Beach',
     rating: '9.8',
@@ -439,6 +1230,102 @@ export const PROPERTIES = {
       { place: 'Agios Ioannis Porto Tavernas', time: '3 min drive' },
       { place: 'Church of Panagia Megalochari', time: '8 min drive' },
     ],
+    translations: {
+      el: {
+        name: "Andrea's Traditional House",
+        navLabel: 'Παραδοσιακή Οικία',
+        navSubtitle: 'Εκλεπτυσμένη Παράδοση',
+        shortOptionTitle: 'Κυκλαδίτικο Καταφύγιο',
+        badge: 'Ζευγάρια & Μικρές Οικογένειες',
+        subtitle: 'Αυθεντικό Κυκλαδίτικο Καταφύγιο · Άγιος Σώστης, Τήνος',
+        location: 'Άγιος Σώστης · 12 λεπτά με τα πόδια από την Παραλία',
+        ratingLabel: 'Άριστο',
+        reviewCount: '29 Επιβεβαιωμένες Κριτικές',
+        highlights: [
+          '12 Λεπτά από την Παραλία',
+          'Κυκλαδίτικες Καμάρες',
+          'Αυλή με Κήπο & BBQ',
+          'Δωρεάν Parking',
+        ],
+        specs: [
+          { label: 'Χωρητικότητα', value: 'Έως 3 Επισκέπτες' },
+          { label: 'Στυλ', value: 'Κυκλαδίτικη Πέτρα & Καμάρα' },
+          { label: 'Παραλία', value: '12 Λεπτά με τα Πόδια' },
+          { label: 'Αυλή', value: 'Ιδιωτικός Κήπος & BBQ' },
+        ],
+        description:
+          'Στον ήσυχο Άγιο Σώστη, κοντά στη χρυσαφένια αμμουδιά του Αγίου Ιωάννη Πόρτο, το Andrea’s Traditional House είναι ένα προσεκτικά ανακαινισμένο κυκλαδίτικο καταφύγιο. Οι λευκές καμάρες, η φυσική πέτρα και η ηλιόλουστη ιδιωτική αυλή με θέα στο βουνό και τον κήπο προσφέρουν μια γαλήνια απόδραση λίγα λεπτά από τη Χώρα της Τήνου.',
+        story:
+          'Σχεδιασμένη για ταξιδιώτες που αναζητούν την αυθεντική νησιώτικη αύρα με όλες τις σύγχρονες ανέσεις, η κατοικία διαθέτει ιδιωτική βεράντα, εγκαταστάσεις μπάρμπεκιου και άμεση πρόσβαση στα κρυστάλλινα, ρηχά νερά της παραλίας του Αγίου Σώστη.',
+        amenities: [
+          'Ιδιωτική Αυλή με Θέα στο Βουνό & τον Κήπο',
+          'Αυθεντικές Κυκλαδίτικες Καμάρες & Λιθοδομή',
+          'Πλήρως Εξοπλισμένη Κουζίνα & Τραπεζαρία',
+          'Εγκαταστάσεις Εξωτερικού BBQ',
+          '12 Λεπτά με τα Πόδια από την Παραλία Αγίου Σώστη',
+          'Κλιματισμός & Ηχομόνωση',
+          'Δωρεάν Υψηλής Ταχύτητας Wi-Fi',
+          'Πλυντήριο Ρούχων & Σίδερο',
+          'Ιδιωτική Είσοδος & Καταπράσινος Κήπος',
+          'Δωρεάν Ιδιωτικός Χώρος Στάθμευσης',
+          'Υποστήριξη Ενοικίασης Αυτοκινήτου & Ποδηλάτου',
+          'Check-in 14:00 · Check-out 11:00',
+        ],
+        distances: [
+          { place: 'Χρυσή Αμμουδιά Αγίου Σώστη', time: '12 λεπτά με τα πόδια' },
+          { place: 'Χώρα Τήνου & Λιμάνι', time: '7 λεπτά οδικώς (4,8 χλμ.)' },
+          { place: 'Ταβέρνες Αγίου Ιωάννη Πόρτο', time: '3 λεπτά οδικώς' },
+          { place: 'Ιερός Ναός Παναγίας Μεγαλόχαρης', time: '8 λεπτά οδικώς' },
+        ],
+      },
+      it: {
+        name: 'Casa Tradizionale di Andrea',
+        navLabel: 'Casa Tradizionale',
+        navSubtitle: 'Tradizione Raffinata',
+        shortOptionTitle: 'Rifugio Cicladico in Pietra',
+        badge: 'Coppie e Piccole Famiglie',
+        subtitle: 'Rifugio Cicladico Autentico · Agios Sostis, Tinos',
+        location: 'Agios Sostis · 12 min a piedi dalla Spiaggia',
+        ratingLabel: 'Eccezionale',
+        reviewCount: '29 Recensioni Verificate',
+        highlights: [
+          '12 Min a Piedi dalla Spiaggia',
+          'Archi Cicladici',
+          'Patio con Giardino e BBQ',
+          'Parcheggio Gratuito',
+        ],
+        specs: [
+          { label: 'Capienza', value: 'Fino a 3 Ospiti' },
+          { label: 'Stile', value: 'Pietra e Archi Cicladici' },
+          { label: 'Spiaggia', value: '12 Min a Piedi' },
+          { label: 'Patio', value: 'Giardino Privato e BBQ' },
+        ],
+        description:
+          'Situata nella tranquilla Agios Sostis, vicino alle sabbie dorate di Agios Ioannis Porto, la Casa Tradizionale di Andrea è un santuario cicladico finemente restaurato. Archi imbiancati a calce, pietra naturale e un patio privato soleggiato con vista sulle montagne e sul giardino offrono un rifugio intimo a pochi minuti da Tinos Chora.',
+        story:
+          'Pensata per chi ama l’autentica anima delle isole greche senza rinunciare al comfort moderno, la dimora offre una terrazza privata, barbecue all’aperto e vicinanza immediata alle acque cristalline della spiaggia di Agios Sostis.',
+        amenities: [
+          'Patio Privato con Vista Montagna e Giardino',
+          'Archi Cicladici Autentici e Pietra Locale',
+          'Cucina Completamente Attrezzata e Zona Pranzo',
+          'Barbecue Esterno',
+          'A 12 Minuti a Piedi dalla Spiaggia di Agios Sostis',
+          'Aria Condizionata e Insonorizzazione',
+          'Wi-Fi Gratuito ad Alta Velocità',
+          'Lavatrice e Ferro da Stiro',
+          'Ingresso Privato e Giardino Mediterraneo',
+          'Parcheggio Privato Gratuito in Loco',
+          'Assistenza Noleggio Auto e Biciclette',
+          'Check-in 14:00 · Check-out 11:00',
+        ],
+        distances: [
+          { place: 'Spiaggia Dorata di Agios Sostis', time: '12 min a piedi' },
+          { place: 'Tinos Chora e Porto', time: '7 min in auto (4,8 km)' },
+          { place: 'Taverne di Agios Ioannis Porto', time: '3 min in auto' },
+          { place: 'Chiesa di Panagia Megalochari', time: '8 min in auto' },
+        ],
+      },
+    },
     bookingLink:
       'https://www.booking.com/hotel/gr/andrea-39-s-tinos-house.en-gb.html?aid=898224&app_hotel_id=1487398',
     reviewsLink:
@@ -481,7 +1368,9 @@ export const PROPERTIES = {
     name: "Andrea's Two-Bedroom House",
     navLabel: 'Two-Bedroom House',
     navSubtitle: 'Spacious Elegance',
-    badge: 'Two-Bedroom Residence',
+    maxGuestsCount: 5,
+    shortOptionTitle: 'Spacious Family Retreat',
+    badge: 'Families & Friends',
     subtitle: 'Spacious Family & Friends Retreat · Agios Sostis, Tinos',
     location: 'Agios Sostis · Coastal Enclave',
     rating: '9.7',
@@ -518,6 +1407,102 @@ export const PROPERTIES = {
       { place: 'Laouti & Pachia Ammos Beaches', time: '5 min drive' },
       { place: 'Sanctuary of Poseidon (Kionia)', time: '12 min drive' },
     ],
+    translations: {
+      el: {
+        name: "Andrea's Two-Bedroom House",
+        navLabel: 'Οικία Δύο Υπνοδωματίων',
+        navSubtitle: 'Άνετη Κομψότητα',
+        shortOptionTitle: 'Ευρύχωρη Οικογενειακή Κατοικία',
+        badge: 'Οικογένειες & Παρέες',
+        subtitle: 'Ευρύχωρο Καταφύγιο για Οικογένειες & Παρέες · Άγιος Σώστης, Τήνος',
+        location: 'Άγιος Σώστης · Παραθαλάσσιος Οικισμός',
+        ratingLabel: 'Άριστο',
+        reviewCount: '41 Επιβεβαιωμένες Κριτικές',
+        highlights: [
+          '2 Ιδιωτικά Υπνοδωμάτια',
+          'Μεγάλη Ηλιόλουστη Βεράντα',
+          'Δίπλα στην Παραλία',
+          'Πλήρης Κουζίνα',
+        ],
+        specs: [
+          { label: 'Χωρητικότητα', value: 'Έως 5 Επισκέπτες' },
+          { label: 'Διαρρύθμιση', value: '2 Ιδιωτικά Υπνοδωμάτια' },
+          { label: 'Παραλία', value: '12 Λεπτά με τα Πόδια' },
+          { label: 'Εξωτερικός Χώρος', value: 'Μεγάλη Βεράντα & Κήπος' },
+        ],
+        description:
+          'Σχεδιασμένη για οικογένειες και παρέες που αναζητούν άνεση χώρου και παραθαλάσσια ηρεμία, η Οικία Δύο Υπνοδωματίων του Andrea συνδυάζει την κυκλαδίτικη ζεστασιά με τη σύγχρονη κομψότητα. Διαθέτει δύο φωτεινά υπνοδωμάτια, άνετο σαλόνι και τραπεζαρία, πλήρως εξοπλισμένη κουζίνα και ιδιωτική βεράντα με θέα στον μεσογειακό κήπο και τα βουνά της Τήνου.',
+        story:
+          'Στον αγαπημένο παραθαλάσσιο οικισμό του Αγίου Σώστη (Όρμος Αγίου Ιωάννη), βρίσκεστε λίγα βήματα από τις χρυσαφένιες αμμουδιές με θέα προς τη Μύκονο, και μόλις 7 λεπτά οδικώς από το ζωντανό λιμάνι της Χώρας Τήνου.',
+        amenities: [
+          '2 Ξεχωριστά Υπνοδωμάτια με Εκλεκτά Λινά',
+          'Μεγάλη Ιδιωτική Βεράντα & Κήπος',
+          'Θέα στο Βουνό & τη Μεσογειακή Αυλή',
+          'Πλήρης Κουζίνα (Φούρνος, Εστίες, Ψυγείο)',
+          'Εξωτερική Τραπεζαρία & BBQ',
+          'Ευρύχωρο Σαλόνι με Καναπέ',
+          'Πλυντήριο Ρούχων, Σίδερο & Στεγνωτήρας Μαλλιών',
+          'Κλιματισμός σε Όλους τους Χώρους',
+          'Δωρεάν Υψηλής Ταχύτητας Wi-Fi',
+          'Δωρεάν Ιδιωτικός Χώρος Στάθμευσης',
+          'Ήσυχη Παραθαλάσσια Τοποθεσία',
+          'Υποστήριξη Ενοικίασης Αυτοκινήτου & Ποδηλάτου',
+        ],
+        distances: [
+          { place: 'Παραλία Αγίου Σώστη', time: '12 λεπτά με τα πόδια' },
+          { place: 'Χώρα Τήνου & Λιμάνι', time: '7 λεπτά οδικώς (4,8 χλμ.)' },
+          { place: 'Παραλίες Λαούτι & Παχιά Άμμος', time: '5 λεπτά οδικώς' },
+          { place: 'Ιερό Ποσειδώνα (Κιόνια)', time: '12 λεπτά οδικώς' },
+        ],
+      },
+      it: {
+        name: 'Casa con Due Camere di Andrea',
+        navLabel: 'Casa con Due Camere',
+        navSubtitle: 'Eleganza Spaziosa',
+        shortOptionTitle: 'Spazioso Rifugio per Famiglie',
+        badge: 'Famiglie e Amici',
+        subtitle: 'Spazioso Rifugio per Famiglie e Amici · Agios Sostis, Tinos',
+        location: 'Agios Sostis · Enclave Costiera',
+        ratingLabel: 'Eccezionale',
+        reviewCount: '41 Recensioni Verificate',
+        highlights: [
+          '2 Camere Private',
+          'Ampia Veranda Soleggiata',
+          'Vicino alla Spiaggia',
+          'Cucina Completa',
+        ],
+        specs: [
+          { label: 'Capienza', value: 'Fino a 5 Ospiti' },
+          { label: 'Layout', value: '2 Camere da Letto Private' },
+          { label: 'Spiaggia', value: '12 Min a Piedi' },
+          { label: 'Esterno', value: 'Ampia Veranda e Giardino' },
+        ],
+        description:
+          'Creata per famiglie e amici che cercano ampi spazi e tranquillità costiera, la Casa con Due Camere di Andrea unisce il calore cicladico all’eleganza contemporanea. Offre due camere serene, un luminoso soggiorno con sala da pranzo, cucina completa e una veranda privata incorniciata da giardini mediterranei.',
+        story:
+          'Situata nella ricercata enclave costiera di Agios Sostis, a pochi passi dalle spiagge dorate con vista su Mykonos e a soli 7 minuti di auto dal porto di Tinos Chora.',
+        amenities: [
+          '2 Camere Separate con Biancheria Premium',
+          'Ampia Veranda Privata e Giardino',
+          'Vista sulle Montagne e sul Giardino Mediterraneo',
+          'Cucina Completa (Forno, Piano Cottura, Frigorifero)',
+          'Zona Pranzo Esterna e BBQ',
+          'Ampio Soggiorno con Divano',
+          'Lavatrice, Ferro da Stiro e Asciugacapelli',
+          'Aria Condizionata in Tutti gli Ambienti',
+          'Wi-Fi Gratuito ad Alta Velocità',
+          'Parcheggio Privato Gratuito in Loco',
+          'Contesto Costiero Tranquillo',
+          'Supporto Noleggio Auto e Bici',
+        ],
+        distances: [
+          { place: 'Spiaggia di Agios Sostis', time: '12 min a piedi' },
+          { place: 'Tinos Chora e Porto', time: '7 min in auto (4,8 km)' },
+          { place: 'Spiagge di Laouti e Pachia Ammos', time: '5 min in auto' },
+          { place: 'Santuario di Poseidone (Kionia)', time: '12 min in auto' },
+        ],
+      },
+    },
     bookingLink:
       'https://www.booking.com/hotel/gr/andrea-39-s-tinos-house.en-gb.html?aid=898224&app_hotel_id=1487398',
     reviewsLink:
@@ -555,13 +1540,13 @@ export const PROPERTIES = {
   },
 };
 
-export const COLLECTION_AT_A_GLANCE = [
-  { label: 'Locations on Tinos', value: 'Arnados Hills & Agios Sostis Coast' },
-  { label: 'Architectural Style', value: 'Hand-Quarried Tinos Stone & Cycladic Arches' },
-  { label: 'Accommodations', value: '3 Private Sanctuaries (Up to 5 Guests Each)' },
-  { label: 'Bathrooms & Suites', value: 'Ensuite Marble & Modern Walk-In Showers' },
-  { label: 'Private Pool & Beach', value: 'Infinity Pool (Villa Leonora) · 12 Min Walk to Beach (Andrea’s)' },
-  { label: 'Outdoor Spaces', value: 'Panoramic Sun Terraces, Gardens & Alfresco BBQ' },
+export const BOOKING_SCORE_CATEGORIES = [
+  { label: 'Staff & Greek Hospitality', score: 10.0 },
+  { label: 'Cleanliness', score: 9.9 },
+  { label: 'Comfort & Beds', score: 9.9 },
+  { label: 'Location & Sea Views', score: 9.9 },
+  { label: 'Facilities & Pool', score: 9.8 },
+  { label: 'Value for Money', score: 9.8 },
 ];
 
 export const BOOKING_REVIEWS = [
@@ -578,6 +1563,24 @@ export const BOOKING_REVIEWS = [
     title: 'Lovely, spotless villa with a fantastic host!',
     text: 'Villa Leonora Tinos was lovely, very clean and comfortable. The host was fantastic and made sure every single detail of our stay in Arnados was effortless. The infinity pool view is unforgettable—would definitely book to stay again!',
     highlight: 'Fantastic Host & Spotless Comfort',
+    translations: {
+      el: {
+        country: 'Ηνωμένο Βασίλειο',
+        travelerType: 'Παρέα Φίλων · Βίλα 2 Υπνοδωματίων',
+        date: 'Επιβεβαιωμένη Διαμονή Booking.com',
+        title: 'Υπέροχη, πεντακάθαρη βίλα με φανταστικούς οικοδεσπότες!',
+        text: 'Η Villa Leonora στην Τήνο ήταν υπέροχη, πεντακάθαρη και εξαιρετικά άνετη. Οι οικοδεσπότες ήταν φανταστικοί και φρόντισαν κάθε λεπτομέρεια της διαμονής μας στον Αρνάδο. Η θέα από την πισίνα infinity είναι αξέχαστη—θα κάνουμε σίγουρα ξανά κράτηση!',
+        highlight: 'Εξαιρετική Φιλοξενία & Άψογη Καθαριότητα',
+      },
+      it: {
+        country: 'Regno Unito',
+        travelerType: 'Gruppo di Amici · Villa con 2 Camere',
+        date: 'Soggiorno Verificato Booking.com',
+        title: 'Villa incantevole e impeccabile con un host fantastico!',
+        text: 'Villa Leonora a Tinos è stata incantevole, pulitissima e molto confortevole. L’host è stato fantastico e ha curato ogni minimo dettaglio del nostro soggiorno ad Arnados. La vista dalla piscina a sfioro è indimenticabile—torneremo sicuramente!',
+        highlight: 'Ospitalità Fantastica e Comfort Impeccabile',
+      },
+    },
   },
   {
     id: 2,
@@ -590,8 +1593,26 @@ export const BOOKING_REVIEWS = [
     score: '10',
     date: 'Verified Stay',
     title: 'Spectacular 11-island views from the infinity pool',
-    text: 'Hard to imagine a more spectacular view over Tinos and across the Aegean to 11 Cycladic islands than from Villa Leonora. We were welcomed with fresh fruit, breakfast supplies, and chilled bubbly by the pool.',
+    text: 'Hard to imagine a more spectacular view over Tinos and across the Aegean to 11 Cycladic islands than from Villa Leonora. Theodora, Leo, and John welcomed us with fresh fruit, breakfast supplies, and chilled bubbly by the pool.',
     highlight: '11-Island Panorama & Warm Welcome',
+    translations: {
+      el: {
+        country: 'Ηνωμένο Βασίλειο',
+        travelerType: 'Ζευγάρι · Βίλα με Ιδιωτική Πισίνα',
+        date: 'Επιβεβαιωμένη Διαμονή',
+        title: 'Συγκλονιστική θέα σε 11 νησιά από την πισίνα infinity',
+        text: 'Είναι δύσκολο να φανταστεί κανείς πιο εντυπωσιακή θέα πάνω από την Τήνο και το Αιγαίο προς 11 Κυκλαδονήσια από αυτή της Villa Leonora. Η Θεοδώρα, ο Λεό και ο Γιάννης μας υποδέχθηκαν με φρέσκα φρούτα, πρωινό και παγωμένο αφρώδη οίνο δίπλα στην πισίνα.',
+        highlight: 'Πανόραμα 11 Νησιών & Ζεστή Υποδοχή',
+      },
+      it: {
+        country: 'Regno Unito',
+        travelerType: 'Coppia · Villa con Piscina Privata',
+        date: 'Soggiorno Verificato',
+        title: 'Vista spettacolare su 11 isole dalla piscina a sfioro',
+        text: 'Difficile immaginare una vista più spettacolare su Tinos e sull’Egeo fino a 11 isole Cicladi rispetto a Villa Leonora. Theodora, Leo e John ci hanno accolto con frutta fresca, colazione e bollicine fresche a bordo piscina.',
+        highlight: 'Panorama su 11 Isole e Caloroso Benvenuto',
+      },
+    },
   },
   {
     id: 3,
@@ -606,6 +1627,24 @@ export const BOOKING_REVIEWS = [
     title: 'Perfect layout for a relaxing family holiday',
     text: 'Villa Leonora Tinos was lovely, very clean and comfortable. Having two private ensuite bedrooms and the sun terrace right outside the sliding doors made our family stay super easy. Would definitely book to stay again.',
     highlight: 'Spacious Ensuite Layout',
+    translations: {
+      el: {
+        country: 'Αυστραλία',
+        travelerType: 'Οικογένεια · Βίλα Δύο Υπνοδωματίων',
+        date: 'Επιβεβαιωμένη Διαμονή Booking.com',
+        title: 'Ιδανική διαρρύθμιση για ξεκούραστες οικογενειακές διακοπές',
+        text: 'Η Villa Leonora ήταν υπέροχη, πολύ καθαρή και άνετη. Τα δύο ιδιωτικά υπνοδωμάτια με μπάνιο και η ηλιόλουστη βεράντα ακριβώς έξω από τις μπαλκονόπορτες έκαναν την οικογενειακή μας διαμονή ιδανική.',
+        highlight: 'Άνετη Διαρρύθμιση με Ensuite Υπνοδωμάτια',
+      },
+      it: {
+        country: 'Australia',
+        travelerType: 'Famiglia · Villa con Due Camere',
+        date: 'Soggiorno Verificato Booking.com',
+        title: 'Layout perfetto per una vacanza rilassante in famiglia',
+        text: 'Villa Leonora è stata splendida, pulitissima e confortevole. Avere due camere con bagno privato e la terrazza solarium proprio fuori dalle porte scorrevoli ha reso il nostro soggiorno in famiglia comodissimo.',
+        highlight: 'Spazioso Layout con Camere Ensuite',
+      },
+    },
   },
   {
     id: 4,
@@ -620,6 +1659,24 @@ export const BOOKING_REVIEWS = [
     title: 'All the amenities of a luxury hotel and more',
     text: 'The house itself was clean, comfortable, and tastefully decorated with a wonderful mix of traditional Cycladic style and modern comforts. It had all the amenities of a luxury hotel and more.',
     highlight: 'Cycladic Charm & Luxury Comfort',
+    translations: {
+      el: {
+        country: 'Γαλλία',
+        travelerType: 'Ζευγάρι · Παραδοσιακή Οικία',
+        date: 'Επιβεβαιωμένη Διαμονή Booking.com',
+        title: 'Όλες οι ανέσεις ενός πολυτελούς ξενοδοχείου και ακόμη περισσότερες',
+        text: 'Το σπίτι ήταν πεντακάθαρο, άνετο και καλόγουστα διακοσμημένο με έναν υπέροχο συνδυασμό παραδοσιακού κυκλαδίτικου στυλ και σύγχρονων ανέσεων. Είχε όλες τις παροχές ενός πολυτελούς ξενοδοχείου.',
+        highlight: 'Κυκλαδίτικη Γοητεία & Πολυτελείς Ανέσεις',
+      },
+      it: {
+        country: 'Francia',
+        travelerType: 'Coppia · Casa Tradizionale',
+        date: 'Soggiorno Verificato Booking.com',
+        title: 'Tutti i comfort di un hotel di lusso e molto di più',
+        text: 'La casa era pulita, confortevole e arredata con gusto con un meraviglioso mix di stile tradizionale cicladico e comfort moderni. Aveva tutti i servizi di un hotel di lusso e oltre.',
+        highlight: 'Fascino Cicladico e Comfort di Lusso',
+      },
+    },
   },
   {
     id: 5,
@@ -634,6 +1691,24 @@ export const BOOKING_REVIEWS = [
     title: 'Wonderful week-long escape away from the crowds',
     text: 'We had an excellent stay here for a week and the place was wonderful. It has everything you need for a perfect stay. Only a short drive to Tinos town and a perfect place if you want peace and quiet near the beach.',
     highlight: 'Peaceful Setting Near Chora',
+    translations: {
+      el: {
+        country: 'Δανία',
+        travelerType: 'Οικογένεια · Οικία Δύο Υπνοδωματίων',
+        date: 'Επιβεβαιωμένη Διαμονή Booking.com',
+        title: 'Υπέροχη εβδομαδιαία απόδραση μακριά από την πολυκοσμία',
+        text: 'Είχαμε μια εξαιρετική διαμονή για μία εβδομάδα και ο χώρος ήταν υπέροχος. Διαθέτει όσα χρειάζεστε για μια τέλεια διαμονή, λίγα λεπτά από τη Χώρα της Τήνου και δίπλα στην παραλία.',
+        highlight: 'Ήσυχη Τοποθεσία Κοντά στη Χώρα',
+      },
+      it: {
+        country: 'Danimarca',
+        travelerType: 'Famiglia · Casa con Due Camere',
+        date: 'Soggiorno Verificato Booking.com',
+        title: 'Meravigliosa settimana di relax lontano dalla folla',
+        text: 'Abbiamo trascorso una settimana eccellente in questo posto meraviglioso. Ha tutto il necessario per un soggiorno perfetto, a pochi minuti da Tinos Chora e vicino alla spiaggia.',
+        highlight: 'Oasi di Pace Vicino a Chora',
+      },
+    },
   },
   {
     id: 6,
@@ -648,6 +1723,24 @@ export const BOOKING_REVIEWS = [
     title: 'Best hospitality on any Greek island!',
     text: 'Best hospitality on any of the Greek islands I have stayed at so far! Walking distance to Agios Sostis beach, spotless rooms, and hosts who truly care. Cannot wait to come back next summer.',
     highlight: 'Unmatched Greek Hospitality',
+    translations: {
+      el: {
+        country: 'Ελλάδα',
+        travelerType: 'Παρέα Φίλων · Οικία Δύο Υπνοδωματίων',
+        date: 'Επιβεβαιωμένη Διαμονή Booking.com',
+        title: 'Η καλύτερη φιλοξενία σε ελληνικό νησί!',
+        text: 'Η καλύτερη φιλοξενία που έχω συναντήσει σε ελληνικό νησί! Σε απόσταση αναπνοής από την παραλία του Αγίου Σώστη, πεντακάθαροι χώροι και οικοδεσπότες που νοιάζονται πραγματικά. Ανυπομονούμε να επιστρέψουμε!',
+        highlight: 'Ασύγκριτη Ελληνική Φιλοξενία',
+      },
+      it: {
+        country: 'Grecia',
+        travelerType: 'Amici · Casa con Due Camere',
+        date: 'Soggiorno Verificato Booking.com',
+        title: 'La migliore ospitalità su qualsiasi isola greca!',
+        text: 'La migliore ospitalità mai provata su un’isola greca! A pochi passi dalla spiaggia di Agios Sostis, ambienti impeccabili e host che ci tengono davvero. Non vediamo l’ora di tornare!',
+        highlight: 'Ospitalità Greca Impareggiabile',
+      },
+    },
   },
 ];
 
@@ -665,6 +1758,28 @@ export const TINOS_ATTRACTIONS = {
       info: 'The cultural center of marble art in Greece. Wander through streets where every facade, fountain, and doorway is intricately sculpted by generations of master craftsmen.',
       moreInfo:
         'It is the birthplace of legend Giannoulis Halepas. Spend your afternoon beneath the ancient plane tree in the main square, savoring traditional galaktoboureko as the marble glows in the fading light.',
+      translations: {
+        el: {
+          name: 'Πύργος',
+          tagline: 'Η Καρδιά του Μαρμάρου',
+          subtitle: 'Η Τέχνη του Μαρμάρου',
+          region: 'Βόρεια Τήνος · 25 λεπτά οδικώς',
+          highlight: 'Μαρμαροτεχνία UNESCO & Πλατεία με τον Πλάτανο',
+          info: 'Το πολιτιστικό κέντρο της μαρμαροτεχνίας στην Ελλάδα. Περιπλανηθείτε σε σοκάκια όπου κάθε πρόσοψη, κρήνη και υπέρθυρο είναι σμιλεμένο από γενιές κορυφαίων τεχνιτών.',
+          moreInfo:
+            'Είναι η γενέτειρα του Γιαννούλη Χαλεπά. Απολαύστε τον καφέ και το παραδοσιακό γαλακτομπούρεκο κάτω από τον αιωνόβιο πλάτανο της κεντρικής πλατείας.',
+        },
+        it: {
+          name: 'Pyrgos',
+          tagline: 'Il Cuore di Marmo',
+          subtitle: 'L’Arte del Marmo',
+          region: 'Tinos Nord · 25 min in auto',
+          highlight: 'Artigianato del Marmo UNESCO e Piazza del Platano',
+          info: 'Il centro culturale dell’arte del marmo in Grecia. Passeggia tra vicoli dove ogni facciata, fontana e portale è scolpito da generazioni di maestri artigiani.',
+          moreInfo:
+            'Luogo natale del celebre scultore Giannoulis Halepas. Trascorri il pomeriggio sotto l’antico platano nella piazza principale gustando il tradizionale galaktoboureko.',
+        },
+      },
     },
     {
       name: 'Volax',
@@ -676,6 +1791,28 @@ export const TINOS_ATTRACTIONS = {
       info: 'A surreal, medieval village nestled among giant, rounded granite boulders that look as if they were dropped from the heavens by the hands of Titans.',
       moreInfo:
         'Beyond its otherworldly geography, Volax is historically famous for its deeply rooted basket-weaving tradition. As you walk the narrow paths, you will find verses of Greek poetry written upon the old wooden doors.',
+      translations: {
+        el: {
+          name: 'Βώλαξ',
+          tagline: 'Το Σεληνιακό Τοπίο',
+          subtitle: 'Το Σεληνιακό Τοπίο',
+          region: 'Κεντρική Τήνος · 15 λεπτά οδικώς',
+          highlight: 'Γρανιτένιοι Ογκόλιθοι & Ποίηση στις Πόρτες',
+          info: 'Ένα μοναδικό χωριό φωλιασμένο ανάμεσα σε γιγάντιους στρογγυλούς γρανιτένιους βράχους που μοιάζουν με σεληνιακό τοπίο.',
+          moreInfo:
+            'Πέρα από τη σπάνια γεωλογία του, ο Βώλακας φημίζεται για την παράδοση της καλαθοπλεκτικής και τους στίχους Ελλήνων ποιητών ζωγραφισμένους πάνω στις ξύλινες πόρτες.',
+        },
+        it: {
+          name: 'Volax',
+          tagline: 'Il Paesaggio Lunare',
+          subtitle: 'Il Paesaggio Lunare',
+          region: 'Altipiani Centrali · 15 min in auto',
+          highlight: 'Massi di Granito Surreali e Poesie sulle Porte',
+          info: 'Un villaggio surreale immerso tra giganteschi massi di granito arrotondati che sembrano caduti dal cielo.',
+          moreInfo:
+            'Oltre alla sua geografia unica, Volax è famoso per l’antica tradizione dell’intreccio dei cesti e per i versi di poesia greca dipinti sulle porte in legno.',
+        },
+      },
     },
     {
       name: 'Kardiani',
@@ -687,6 +1824,28 @@ export const TINOS_ATTRACTIONS = {
       info: 'Built on the steep, lush slopes of Mount Pateles, this village is a literal oasis fueled by natural flowing springs that run directly through the streets.',
       moreInfo:
         'It is an architectural marvel where Catholic and Orthodox churches sit side by side in harmony. The tiered alleys offer breathtaking, amphitheatrical, uninterrupted views of the Aegean Sea.',
+      translations: {
+        el: {
+          name: 'Καρδιανή',
+          tagline: 'Η Πράσινη Όαση',
+          subtitle: 'Η Πράσινη Όαση',
+          region: 'Δυτική Πλαγιά · 20 λεπτά οδικώς',
+          highlight: 'Τρεχούμενα Νερά & Μπαλκόνι στο Ηλιοβασίλεμα του Αιγαίου',
+          info: 'Χτισμένη στις καταπράσινες πλαγιές του όρους Πατέλες, η Καρδιανή είναι μια αληθινή όαση με τρεχούμενες πηγές που διασχίζουν τα μαρμάρινα σοκάκια.',
+          moreInfo:
+            'Ένα αρχιτεκτονικό στολίδι όπου Καθολικές και Ορθόδοξες εκκλησίες συνυπάρχουν αρμονικά με αμφιθεατρική θέα στο Αιγαίο.',
+        },
+        it: {
+          name: 'Kardiani',
+          tagline: 'L’Oasi Verde',
+          subtitle: 'L’Oasi Verde',
+          region: 'Versante Ovest · 20 min in auto',
+          highlight: 'Sorgenti Montane e Balconi sul Tramonto Egeo',
+          info: 'Costruito sui pendii verdi del Monte Pateles, questo villaggio è un’oasi attraversata da sorgenti naturali che scorrono lungo i vicoli in marmo.',
+          moreInfo:
+            'Un gioiello architettonico con vista anfiteatrale mozzafiato sul Mar Egeo al tramonto.',
+        },
+      },
     },
   ],
   beaches: [
@@ -700,6 +1859,28 @@ export const TINOS_ATTRACTIONS = {
       info: "Two distinct beaches sharing one beautiful bay, perfectly showcasing the duality of the island's untamed nature.",
       moreInfo:
         'One side is exposed to the wild northern winds, making it a legendary haven for Aegean surf culture. The other sits deeply protected, offering tranquil waters and a slow-paced taverna nestled in the sand.',
+      translations: {
+        el: {
+          name: 'Κολυμπήθρα',
+          tagline: 'Surf & Απάνεμος Κόλπος',
+          subtitle: 'Ο Διπλός Κόλπος',
+          waterStyle: 'Κύματα για Surf & Ήρεμα Τιρκουάζ Νερά',
+          distance: '20 λεπτά οδικώς',
+          info: 'Δύο ξεχωριστές παραλίες στον ίδιο πανέμορφο κόλπο, που αναδεικνύουν τη διπλή γοητεία της τηνιακής φύσης.',
+          moreInfo:
+            'Η μεγάλη παραλία είναι ιδανική για surf στα κύματα του Αιγαίου, ενώ η μικρή είναι απόλυτα απάνεμη με κρυστάλλινα νερά.',
+        },
+        it: {
+          name: 'Kolymbithra',
+          tagline: 'Surf e Baia Riparata',
+          subtitle: 'La Doppia Baia',
+          waterStyle: 'Onde per il Surf e Acque Turchesi Calme',
+          distance: '20 min in auto',
+          info: 'Due spiagge distinte che condividono una splendida baia, incarnando la natura selvaggia e serena di Tinos.',
+          moreInfo:
+            'Un lato è celebre per il surf nell’Egeo, mentre l’altro è protetto dai venti con acque calme e cristalline.',
+        },
+      },
     },
     {
       name: 'Agios Sostis',
@@ -711,6 +1892,28 @@ export const TINOS_ATTRACTIONS = {
       info: 'A stunning, serene stretch of golden sand with incredibly shallow, crystal waters looking straight out toward the island of Mykonos.',
       moreInfo:
         'It is crowned by a picturesque 19th-century church overlooking the entire bay. It is the perfect sanctuary for early, quiet mornings where the water mirrors the sky.',
+      translations: {
+        el: {
+          name: 'Άγιος Σώστης',
+          tagline: '12 Λεπτά με τα Πόδια από το Andrea’s House',
+          subtitle: 'Η Χρυσή Ακτή',
+          waterStyle: 'Ρηχά Κρυστάλλινα Νερά & Θέα στη Μύκονο',
+          distance: '12 λεπτά με τα πόδια',
+          info: 'Μια υπέροχη χρυσαφένια αμμουδιά με ρηχά, κρυστάλλινα νερά και ανεμπόδιστη θέα προς τη Μύκονο.',
+          moreInfo:
+            'Στεφανώνεται από το γραφικό εκκλησάκι του 19ου αιώνα και αποτελεί ιδανικό καταφύγιο για οικογένειες και ήρεμα πρωινά δίπλα στο κύμα.',
+        },
+        it: {
+          name: 'Agios Sostis',
+          tagline: 'A 12 Min a Piedi da Casa di Andrea',
+          subtitle: 'La Costa Dorata',
+          waterStyle: 'Acque Cristalline Basse e Vista su Mykonos',
+          distance: '12 min a piedi',
+          info: 'Una splendida distesa di sabbia dorata con acque cristalline poco profonde affacciate direttamente su Mykonos.',
+          moreInfo:
+            'Incorniciata da una pittoresca chiesa del XIX secolo, è perfetta per mattinate serene in riva al mare.',
+        },
+      },
     },
     {
       name: 'Pachia Ammos',
@@ -722,6 +1925,63 @@ export const TINOS_ATTRACTIONS = {
       info: 'A secluded, untouched paradise that feels almost otherworldly. It is defined by its striking green-tinged sand dunes leading directly into the sea.',
       moreInfo:
         "Swept by the wind and completely untouched by modern infrastructure, Pachia Ammos offers a true escape into nature's rawest form. The deep emerald waters here are unforgettable.",
+      translations: {
+        el: {
+          name: 'Παχιά Άμμος',
+          tagline: 'Αμμόλοφοι & Σμαραγδένια Νερά',
+          subtitle: 'Η Κρυμμένη Αμμουδιά',
+          waterStyle: 'Παρθένοι Αμμόλοφοι & Σμαραγδένια Νερά',
+          distance: '8 λεπτά οδικώς',
+          info: 'Ένας ανέγγιχτος παράδεισος με εντυπωσιακούς φυσικούς αμμόλοφους που καταλήγουν απευθείας στα σμαραγδένια νερά του Αιγαίου.',
+          moreInfo:
+            'Χωρίς καμία τουριστική παρέμβαση, η Παχιά Άμμος προσφέρει απόλυτη επαφή με την αυθεντική κυκλαδίτικη φύση.',
+        },
+        it: {
+          name: 'Pachia Ammos',
+          tagline: 'Dune di Sabbia Incontaminate',
+          subtitle: 'La Duna Nascosta',
+          waterStyle: 'Acque Smeraldo e Dune Naturali',
+          distance: '8 min in auto',
+          info: 'Un paradiso appartato e incontaminato caratterizzato da suggestive dune di sabbia dorata che scendono nel mare color smeraldo.',
+          moreInfo:
+            'Completamente priva di strutture artificiali, offre una fuga autentica nella natura più pura di Tinos.',
+        },
+      },
     },
   ],
 };
+
+// Helper: returns a localized Property object for the active language ('en' | 'it' | 'el')
+export function getLocalizedProperty(propertyId, lang = 'en') {
+  const base = PROPERTIES[propertyId];
+  if (!base) return null;
+  if (lang === 'en' || !base.translations?.[lang]) return base;
+  return {
+    ...base,
+    ...base.translations[lang],
+  };
+}
+
+// Helper: returns localized BOOKING_REVIEWS array for the active language ('en' | 'it' | 'el')
+export function getLocalizedReviews(lang = 'en') {
+  return BOOKING_REVIEWS.map((rev) => {
+    if (lang === 'en' || !rev.translations?.[lang]) return rev;
+    return {
+      ...rev,
+      ...rev.translations[lang],
+    };
+  });
+}
+
+// Helper: returns localized TINOS_ATTRACTIONS for the active language ('en' | 'it' | 'el')
+export function getLocalizedAttractions(lang = 'en') {
+  return {
+    ...TINOS_ATTRACTIONS,
+    villages: TINOS_ATTRACTIONS.villages.map((v) =>
+      lang !== 'en' && v.translations?.[lang] ? { ...v, ...v.translations[lang] } : v
+    ),
+    beaches: TINOS_ATTRACTIONS.beaches.map((b) =>
+      lang !== 'en' && b.translations?.[lang] ? { ...b, ...b.translations[lang] } : b
+    ),
+  };
+}

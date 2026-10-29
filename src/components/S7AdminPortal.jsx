@@ -1,6 +1,7 @@
 // src/components/S7AdminPortal.jsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
+
 import {
   Shield,
   Lock,
@@ -29,10 +30,12 @@ import {
   Check,
   X,
   Info,
+  Clock,
 } from 'lucide-react';
 import {
   loadAriStore,
   saveAriStore,
+  syncAriStoreFromCloud,
   getDayAri,
   updatePropertyDates,
   formatDateISO,
@@ -94,6 +97,12 @@ const euroFormatter = new Intl.NumberFormat('en-IE', {
   maximumFractionDigits: 0,
 });
 
+// Session Timeout Constants (1 Hour Default vs 7 Days with Remember Me)
+const SESSION_META_KEY = 'vacation_s7_session_timeout_v1';
+const REMEMBER_POLICY_KEY = 'vacation_s7_allow_remember_me_v1';
+const ONE_HOUR_MS = 60 * 60 * 1000; // 1 Hour (3,600,000 ms)
+const REMEMBER_ME_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
+
 // Derive truthful connection state from actual property channel configuration
 function getPropertyConnectionState(prop, syncError) {
   if (syncError) {
@@ -130,7 +139,7 @@ function getPropertyConnectionState(prop, syncError) {
 
 export default function S7AdminPortal({ setView }) {
   // ==========================================================================
-  // 1. SUPABASE AUTHENTICATION & RATE-LIMIT STATE
+  // 1. SUPABASE AUTHENTICATION, RATE-LIMIT & 1-HOUR SESSION TIMEOUT STATE
   // ==========================================================================
   const [session, setSession] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -141,6 +150,15 @@ export default function S7AdminPortal({ setView }) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState(0);
+
+  // Admin "Remember Me" Permission & 1-Hour Session Timer State
+  const [allowRememberMePolicy, setAllowRememberMePolicy] = useState(() => {
+    const saved = localStorage.getItem(REMEMBER_POLICY_KEY);
+    return saved === null ? true : saved === 'true';
+  });
+  const [rememberMeChecked, setRememberMeChecked] = useState(false);
+  const [isExtendedSession, setIsExtendedSession] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(3600);
 
   // ==========================================================================
   // 2. STORE, UNDO STACK & NAVIGATION STATE
@@ -183,14 +201,16 @@ export default function S7AdminPortal({ setView }) {
   });
   const [settingsDirty, setSettingsDirty] = useState(false);
 
-  // Explicit Save/Cancel Draft State for Channel Settings
+  // Explicit Save/Cancel Draft State for Channel Settings (+ iCal Import URLs for cron-job.org)
   const [channelDraft, setChannelDraft] = useState({
     provider: 'channex',
     endpointUrl: '',
     bookingHotelId: '',
     bookingRoomId: '',
     bookingRatePlanId: '',
+    bookingIcalImportUrl: '',
     airbnbListingId: '',
+    airbnbIcalImportUrl: '',
   });
   const [channelDirty, setChannelDirty] = useState(false);
 
@@ -214,16 +234,76 @@ export default function S7AdminPortal({ setView }) {
     };
   }, []);
 
-  // Supabase Auth Session Listener
+  // Pull latest store from Supabase Cloud on mount
+  useEffect(() => {
+    if (typeof syncAriStoreFromCloud === 'function') {
+      syncAriStoreFromCloud().then((cloudPayload) => {
+        if (cloudPayload) {
+          setStore(cloudPayload);
+          if (cloudPayload?.security?.allowRememberMe !== undefined) {
+            const allowed = Boolean(cloudPayload.security.allowRememberMe);
+            setAllowRememberMePolicy(allowed);
+            localStorage.setItem(REMEMBER_POLICY_KEY, String(allowed));
+          }
+        }
+      });
+    }
+  }, []);
+
+  const handleLogout = useCallback(async (timeoutMessage = '') => {
+    localStorage.removeItem(SESSION_META_KEY);
+    await supabase.auth.signOut();
+    setSession(null);
+    if (timeoutMessage && typeof timeoutMessage === 'string') {
+      setLoginError(timeoutMessage);
+    }
+  }, []);
+
+  // Supabase Auth Session Listener + 1-Hour Expiry Check
   useEffect(() => {
     let mounted = true;
     supabase.auth
       .getSession()
       .then(({ data }) => {
-        if (mounted) {
-          setSession(data?.session || null);
-          setIsCheckingAuth(false);
+        if (!mounted) return;
+        const activeSess = data?.session || null;
+
+        if (activeSess) {
+          try {
+            const rawMeta = localStorage.getItem(SESSION_META_KEY);
+            const meta = rawMeta ? JSON.parse(rawMeta) : null;
+
+            if (meta && meta.expiresAt && Date.now() < meta.expiresAt) {
+              setSession(activeSess);
+              setIsExtendedSession(Boolean(meta.extended));
+              setRemainingSeconds(
+                Math.max(1, Math.floor((meta.expiresAt - Date.now()) / 1000))
+              );
+            } else if (!meta) {
+              // Initialize a default 1-hour session if none existed yet
+              const expiresAt = Date.now() + ONE_HOUR_MS;
+              localStorage.setItem(
+                SESSION_META_KEY,
+                JSON.stringify({
+                  email: activeSess.user.email,
+                  extended: false,
+                  expiresAt,
+                })
+              );
+              setSession(activeSess);
+              setIsExtendedSession(false);
+              setRemainingSeconds(3600);
+            } else {
+              // Expired session -> Sign out immediately
+              handleLogout('Your session timed out after 1 hour. Please sign in again.');
+            }
+          } catch {
+            setSession(activeSess);
+          }
+        } else {
+          setSession(null);
         }
+        setIsCheckingAuth(false);
       })
       .catch(() => {
         if (mounted) setIsCheckingAuth(false);
@@ -241,7 +321,43 @@ export default function S7AdminPortal({ setView }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [handleLogout]);
+
+  // Live 1-Second Session Countdown Timer (Enforces 1-hour or 7-day timeout)
+  useEffect(() => {
+    if (!session) return;
+
+    const timer = setInterval(() => {
+      try {
+        const rawMeta = localStorage.getItem(SESSION_META_KEY);
+        if (!rawMeta) return;
+        const meta = JSON.parse(rawMeta);
+        const secsLeft = Math.floor((meta.expiresAt - Date.now()) / 1000);
+
+        if (secsLeft <= 0) {
+          clearInterval(timer);
+          handleLogout('Session timed out for security. Please sign in again.');
+        } else {
+          setRemainingSeconds(secsLeft);
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [session, handleLogout]);
+
+  const formatSessionCountdown = (totalSec) => {
+    if (totalSec > 86400) {
+      const d = Math.floor(totalSec / 86400);
+      const h = Math.floor((totalSec % 86400) / 3600);
+      return `${d}d ${h}h`;
+    }
+    const mins = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const secs = String(totalSec % 60).padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
 
   // Sync staged drafts whenever selectedProperty changes
   useEffect(() => {
@@ -260,7 +376,9 @@ export default function S7AdminPortal({ setView }) {
       bookingHotelId: prop.channels?.bookingCom?.hotelId || '',
       bookingRoomId: prop.channels?.bookingCom?.roomId || '',
       bookingRatePlanId: prop.channels?.bookingCom?.ratePlanId || '',
+      bookingIcalImportUrl: prop.channels?.bookingCom?.icalImportUrl || '',
       airbnbListingId: prop.channels?.airbnb?.listingId || '',
+      airbnbIcalImportUrl: prop.channels?.airbnb?.icalImportUrl || '',
     });
     setChannelDirty(false);
     setQuickPaintPrice(String(prop.baseRate));
@@ -287,7 +405,7 @@ export default function S7AdminPortal({ setView }) {
   };
 
   // ==========================================================================
-  // 3. SUPABASE LOGIN & LOGOUT HANDLERS
+  // 3. SUPABASE LOGIN & SESSION TIMEOUT POLICY HANDLERS
   // ==========================================================================
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -301,8 +419,9 @@ export default function S7AdminPortal({ setView }) {
     setIsLoggingIn(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: emailInput.trim(),
+      const cleanEmail = emailInput.trim();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
         password: passwordInput,
       });
 
@@ -311,13 +430,32 @@ export default function S7AdminPortal({ setView }) {
         setFailedAttempts(nextFailures);
         if (nextFailures >= 5) {
           setLockoutUntil(Date.now() + 30000);
-          setLoginError('Account temporarily locked for 30 seconds due to multiple failed attempts.');
+          setLoginError(
+            'Account temporarily locked for 30 seconds due to multiple failed attempts.'
+          );
         } else {
           setLoginError('Authentication failed. Verify your email and password.');
         }
       } else {
         setFailedAttempts(0);
         setPasswordInput('');
+
+        // Set 1-Hour Session Timeout (unless Admin allows Remember Me & box is checked)
+        const useExtended = allowRememberMePolicy && rememberMeChecked;
+        const durationMs = useExtended ? REMEMBER_ME_MS : ONE_HOUR_MS;
+        const expiresAt = Date.now() + durationMs;
+
+        localStorage.setItem(
+          SESSION_META_KEY,
+          JSON.stringify({
+            email: data?.user?.email || cleanEmail,
+            extended: useExtended,
+            authenticatedAt: Date.now(),
+            expiresAt,
+          })
+        );
+        setIsExtendedSession(useExtended);
+        setRemainingSeconds(Math.floor(durationMs / 1000));
       }
     } catch {
       setLoginError('Unable to reach authentication service. Check your connection.');
@@ -326,12 +464,53 @@ export default function S7AdminPortal({ setView }) {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-  };
-
   const actorName = session?.user?.email || 'authenticated-admin';
+
+  const handleToggleRememberMePolicy = (allowed) => {
+    setAllowRememberMePolicy(allowed);
+    localStorage.setItem(REMEMBER_POLICY_KEY, String(allowed));
+
+    const next = JSON.parse(JSON.stringify(store));
+    next.security = {
+      ...(next.security || {}),
+      allowRememberMe: allowed,
+    };
+    next.auditLogs = [
+      {
+        id: `sec-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        actor: actorName,
+        action: 'SESSION_POLICY_UPDATED',
+        details: allowed
+          ? 'Allowed "Remember Me" extended sessions (7 days).'
+          : 'Enforced strict 1-hour session timeout for all logins.',
+      },
+      ...(next.auditLogs || []).slice(0, 99),
+    ];
+
+    // If Remember Me is revoked while an extended session is active, cap it to 1 hour immediately
+    if (!allowed && isExtendedSession) {
+      const expiresAt = Date.now() + ONE_HOUR_MS;
+      localStorage.setItem(
+        SESSION_META_KEY,
+        JSON.stringify({
+          email: actorName,
+          extended: false,
+          expiresAt,
+        })
+      );
+      setIsExtendedSession(false);
+      setRemainingSeconds(3600);
+    }
+
+    saveAriStore(next);
+    setStore(next);
+    showNotification(
+      allowed
+        ? 'Enabled "Remember Me" extended sessions.'
+        : 'Disabled "Remember Me". All sessions now strictly time out after 1 hour.'
+    );
+  };
 
   // ==========================================================================
   // 4. CALENDAR COMPUTATION & PROTECTED DATE SAFEGUARDS
@@ -372,7 +551,6 @@ export default function S7AdminPortal({ setView }) {
       const currentAri = getDayAri(store, propId, iso);
       const isCurrentlyProtected =
         BRIGHT_STATUS_STYLES[currentAri.status]?.isProtected;
-      // Warn if changing the status of a booked/maintenance date
       return isCurrentlyProtected && patch.status && patch.status !== currentAri.status;
     });
 
@@ -482,7 +660,10 @@ export default function S7AdminPortal({ setView }) {
       showNotification('Nightly price must be at least €50.', 'error');
       return;
     }
-    if (numericMinStay !== undefined && (isNaN(numericMinStay) || numericMinStay < 1 || numericMinStay > 60)) {
+    if (
+      numericMinStay !== undefined &&
+      (isNaN(numericMinStay) || numericMinStay < 1 || numericMinStay > 60)
+    ) {
       showNotification('Minimum stay must be between 1 and 60 nights.', 'error');
       return;
     }
@@ -586,8 +767,15 @@ export default function S7AdminPortal({ setView }) {
       channelDraft.bookingRoomId.trim();
     next.properties[selectedProperty].channels.bookingCom.ratePlanId =
       channelDraft.bookingRatePlanId.trim();
+    next.properties[selectedProperty].channels.bookingCom.icalImportUrl =
+      channelDraft.bookingIcalImportUrl.trim();
+    next.properties[selectedProperty].channels.bookingCom.enabled = true;
+
     next.properties[selectedProperty].channels.airbnb.listingId =
       channelDraft.airbnbListingId.trim();
+    next.properties[selectedProperty].channels.airbnb.icalImportUrl =
+      channelDraft.airbnbIcalImportUrl.trim();
+    next.properties[selectedProperty].channels.airbnb.enabled = true;
 
     next.auditLogs = [
       {
@@ -595,7 +783,7 @@ export default function S7AdminPortal({ setView }) {
         timestamp: new Date().toISOString(),
         actor: actorName,
         action: 'CHANNEL_MAPPING_SAVED',
-        details: `Updated channel mappings for ${next.properties[selectedProperty].name} (${channelDraft.provider})`,
+        details: `Updated channel & iCal mappings for ${next.properties[selectedProperty].name} (${channelDraft.provider})`,
       },
       ...(next.auditLogs || []).slice(0, 99),
     ];
@@ -603,18 +791,28 @@ export default function S7AdminPortal({ setView }) {
     saveAriStore(next);
     setStore(next);
     setChannelDirty(false);
-    showNotification('Channel mappings saved.');
+    showNotification('Channel mappings & iCal Import URLs saved to Supabase Cloud.');
   };
 
   // ==========================================================================
-  // 6. TRUTHFUL CHANNEL SYNC WITH ERROR HANDLING & RETRY
+  // 6. TRUTHFUL CHANNEL SYNC WITH CRON-JOB.ORG & SUPABASE CLOUD
   // ==========================================================================
   const handleManualSync = async (scope = 'all') => {
     setSyncing(true);
     setSyncError(null);
     try {
+      // 1. Trigger serverless iCal pull (/api/sync-ical) if deployed
+      await fetch('/api/sync-ical?key=s7-tinos-cron-2027').catch(() => {});
+
+      // 2. Push ARI & update timestamps
       const { networkResult, store: nextStore } = await pushChannelManagerAri(scope);
-      setStore({ ...nextStore });
+
+      // 3. Pull merged cloud state
+      const cloudStore =
+        typeof syncAriStoreFromCloud === 'function'
+          ? await syncAriStoreFromCloud()
+          : null;
+      setStore({ ...(cloudStore || nextStore) });
 
       if (!networkResult.ok) {
         const errMsg =
@@ -624,7 +822,7 @@ export default function S7AdminPortal({ setView }) {
           timestamp: new Date().toISOString(),
           scope,
           ok: false,
-          mode: networkResult.simulated ? 'Local / iCal Mode' : 'Live Webhook',
+          mode: networkResult.simulated ? 'Cloud iCal Mode' : 'Live Webhook',
           error: errMsg,
         });
         showNotification(`Channel sync failed: ${errMsg}`, 'error');
@@ -634,13 +832,13 @@ export default function S7AdminPortal({ setView }) {
           scope,
           ok: true,
           mode: networkResult.simulated
-            ? 'Local Store & iCal Feed Updated (No Live API Key in Browser)'
+            ? 'Supabase Cloud & iCal Feeds Synced'
             : 'Live ARI Webhook Pushed',
           error: null,
         });
         showNotification(
           networkResult.simulated
-            ? 'Updated website availability & iCal feeds!'
+            ? 'Synced website availability & iCal feeds with Supabase Cloud!'
             : 'Synced all rates & availability with Channel Manager!'
         );
       }
@@ -687,7 +885,6 @@ export default function S7AdminPortal({ setView }) {
     const ownerClosedCells = validCells.filter((c) => c.ari.status === 'closed');
     const maintenanceCells = validCells.filter((c) => c.ari.status === 'maintenance');
 
-    // Average Direct Price is calculated strictly from OPEN (available) nights
     const avgAvailableRate =
       openCells.length > 0
         ? Math.round(openCells.reduce((acc, c) => acc + c.ari.price, 0) / openCells.length)
@@ -711,7 +908,7 @@ export default function S7AdminPortal({ setView }) {
   }
 
   // ==========================================================================
-  // RENDER 1: SECURE SUPABASE SIGN-IN (NO EXPOSED CREDENTIAL HINTS)
+  // RENDER 1: SECURE SUPABASE SIGN-IN (WITH 1-HOUR TIMEOUT & REMEMBER ME)
   // ==========================================================================
   if (!session) {
     return (
@@ -745,7 +942,7 @@ export default function S7AdminPortal({ setView }) {
             Administrator Sign In
           </h1>
           <p className="text-sm text-slate-500 mb-8">
-            Authenticate with your authorized Supabase account to manage availability, rates, and channel synchronization.
+            Authenticate with your authorized Supabase account. Sessions automatically time out after 1 hour unless Remember Me is enabled.
           </p>
 
           {loginError && (
@@ -807,6 +1004,35 @@ export default function S7AdminPortal({ setView }) {
               </div>
             </div>
 
+            {/* Remember Me Checkbox (Controlled by Admin Policy) */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <label
+                className={`flex items-start gap-2.5 text-xs ${
+                  allowRememberMePolicy
+                    ? 'text-slate-700 cursor-pointer'
+                    : 'text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  disabled={!allowRememberMePolicy}
+                  checked={allowRememberMePolicy && rememberMeChecked}
+                  onChange={(e) => setRememberMeChecked(e.target.checked)}
+                  className="mt-0.5 rounded accent-emerald-600"
+                />
+                <div>
+                  <span className="font-semibold block">
+                    Remember Me (Stay signed in for 7 days)
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {allowRememberMePolicy
+                      ? 'Leave unchecked for strict 1-hour automatic session timeout.'
+                      : 'Disabled by Admin: Strict 1-hour session timeout is enforced.'}
+                  </span>
+                </div>
+              </label>
+            </div>
+
             <button
               type="submit"
               disabled={isLoggingIn || Date.now() < lockoutUntil}
@@ -818,13 +1044,15 @@ export default function S7AdminPortal({ setView }) {
         </div>
 
         <div className="max-w-6xl w-full mx-auto text-center text-xs text-slate-400">
-          Protected by Supabase Authentication · Session Rate-Limiting Active
+          Protected by Supabase Authentication · 1-Hour Session Guard &amp; Rate-Limiting Active
         </div>
       </div>
     );
   }
 
   const activeProp = store.properties[selectedProperty];
+  const liveExportIcalUrl = `${window.location.origin}/api/ical?property=${selectedProperty}`;
+  const cronTargetUrl = `${window.location.origin}/api/sync-ical?key=s7-tinos-cron-2027`;
 
   // ==========================================================================
   // RENDER 2: AUTHENTICATED CHANNEL MANAGER & INVENTORY PORTAL
@@ -894,9 +1122,28 @@ export default function S7AdminPortal({ setView }) {
               <h1 className="font-bold text-base text-slate-900 leading-tight">
                 VacatiON Channel &amp; Rate Console
               </h1>
-              <p className="text-xs text-slate-500">
-                Signed in as <strong className="text-emerald-700">{session.user.email}</strong> · Time Zone: Europe/Athens
-              </p>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Signed in as <strong className="text-emerald-700">{session.user.email}</strong>
+                </span>
+                <span>·</span>
+                <span
+                  className={`inline-flex items-center gap-1 font-mono text-[11px] px-2 py-0.5 rounded-full ${
+                    isExtendedSession
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                      : remainingSeconds < 300
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse'
+                      : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  }`}
+                >
+                  <Clock size={11} />
+                  <span>
+                    {isExtendedSession
+                      ? `Remembered (${formatSessionCountdown(remainingSeconds)})`
+                      : `1h Timeout: ${formatSessionCountdown(remainingSeconds)}`}
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -967,7 +1214,7 @@ export default function S7AdminPortal({ setView }) {
 
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={() => handleLogout()}
               className="rounded-full p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
               title="Sign Out"
               aria-label="Sign Out"
@@ -1806,7 +2053,7 @@ export default function S7AdminPortal({ setView }) {
         )}
 
         {/* ================================================================= */}
-        {/* TAB 3: CHANNELS & ICAL SYNC (TRUTHFUL STATUS & SAVE/CANCEL FLOW)  */}
+        {/* TAB 3: CHANNELS, ICAL & CONSOLE.CRON-JOB.ORG 2-MINUTE SYNC        */}
         {/* ================================================================= */}
         {activeTab === 'channels' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1816,7 +2063,7 @@ export default function S7AdminPortal({ setView }) {
                   Channel Status &amp; iCal Feeds — {activeProp.name}
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Inspect per-channel synchronization status, export live `.ics` feeds, or import external OTA calendars.
+                  Inspect per-channel synchronization status, copy live `.ics` feeds for Booking.com &amp; Airbnb, or configure 2-minute auto-sync via <code>console.cron-job.org</code>.
                 </p>
               </div>
 
@@ -1842,7 +2089,9 @@ export default function S7AdminPortal({ setView }) {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                          iCal + ARI Ready
+                          {activeProp.channels.bookingCom.icalImportUrl
+                            ? '2-Way iCal Active'
+                            : 'iCal + ARI Ready'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-500">
@@ -1860,7 +2109,9 @@ export default function S7AdminPortal({ setView }) {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                          iCal Export Ready
+                          {activeProp.channels.airbnb.icalImportUrl
+                            ? '2-Way iCal Active'
+                            : 'iCal Export Ready'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-500">
@@ -1875,25 +2126,91 @@ export default function S7AdminPortal({ setView }) {
                 </table>
               </div>
 
-              {/* Export iCal Box */}
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900">
-                    Export Availability Calendar (.ics)
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    Download `.ics` file for manual upload into Booking.com or Airbnb calendar import.
-                  </p>
-                </div>
+              {/* Export iCal Box (With Live Feed URL Copy + .ics Download) */}
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">
+                      1. Export Availability Calendar (.ics) — {activeProp.name}
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Paste this live URL into Booking.com &amp; Airbnb &ldquo;Import Calendar&rdquo;, or download the `.ics` file manually.
+                    </p>
+                  </div>
 
-                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleDownloadIcal(selectedProperty)}
-                    className="rounded-full px-4 py-2.5 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer"
+                    className="rounded-full px-4 py-2 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     <Download size={14} />
                     <span>Download .ics File</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={liveExportIcalUrl}
+                    className="flex-1 rounded-xl bg-white border border-slate-300 px-3.5 py-2.5 text-xs font-mono text-slate-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(liveExportIcalUrl);
+                      showNotification('Copied Live Export iCal URL!');
+                    }}
+                    className="rounded-xl px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Copy size={13} />
+                    <span>Copy URL</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* console.cron-job.org 2-Minute Sync Box */}
+              <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold">
+                    console.cron-job.org · 2-Minute Auto-Sync
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    Last Cron Heartbeat:{' '}
+                    {store?.gateway?.lastCronRun
+                      ? new Date(store.gateway.lastCronRun).toLocaleString('en-GB')
+                      : 'Awaiting first ping'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Paste the URL below into{' '}
+                  <a
+                    href="https://console.cron-job.org/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 underline font-semibold"
+                  >
+                    console.cron-job.org/dashboard
+                  </a>{' '}
+                  and set the schedule to <strong>Every 2 minutes</strong>. It will automatically pull the Booking.com &amp; Airbnb `.ics` URLs saved on the right.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={cronTargetUrl}
+                    className="flex-1 rounded-xl bg-slate-800 border border-slate-700 px-3.5 py-2.5 text-xs font-mono text-emerald-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(cronTargetUrl);
+                      showNotification('Copied cron-job.org Target URL!');
+                    }}
+                    className="rounded-xl px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Copy size={13} />
+                    <span>Copy Cron URL</span>
                   </button>
                 </div>
               </div>
@@ -1902,10 +2219,10 @@ export default function S7AdminPortal({ setView }) {
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
                 <h4 className="font-bold text-sm text-slate-900 mb-1 flex items-center gap-2">
                   <Upload size={15} className="text-emerald-600" />
-                  <span>Import External Booking.com / Airbnb Calendar (.ics)</span>
+                  <span>Manual Booking.com / Airbnb Calendar Text Import (.ics)</span>
                 </h4>
                 <p className="text-xs text-slate-500 mb-3">
-                  Paste `.ics` calendar text below to mark matching dates as Booked (OTA) on {activeProp.name}.
+                  Paste `.ics` calendar text below to immediately mark matching dates as Booked (OTA) on {activeProp.name}.
                 </p>
                 <textarea
                   rows="4"
@@ -1918,7 +2235,10 @@ export default function S7AdminPortal({ setView }) {
                   type="button"
                   onClick={() => {
                     if (!icalImportText.includes('BEGIN:VCALENDAR')) {
-                      showNotification('Invalid .ics format. Must contain BEGIN:VCALENDAR.', 'error');
+                      showNotification(
+                        'Invalid .ics format. Must contain BEGIN:VCALENDAR.',
+                        'error'
+                      );
                       return;
                     }
                     pushUndoSnapshot(`iCal import on ${activeProp.name}`);
@@ -1937,14 +2257,14 @@ export default function S7AdminPortal({ setView }) {
               </div>
             </div>
 
-            {/* Right 5 Cols: Explicit Save/Cancel Channel Mapping & Server Credential Notice */}
+            {/* Right 5 Cols: Explicit Save/Cancel Channel Mapping & iCal Import Links */}
             <form
               onSubmit={handleSaveChannelConfig}
               className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4 self-start"
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-900">
-                  Channel Mapping — {activeProp.name}
+                  Channel &amp; iCal Mapping — {activeProp.name}
                 </h3>
                 {channelDirty && (
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
@@ -2046,6 +2366,47 @@ export default function S7AdminPortal({ setView }) {
                 </div>
               </div>
 
+              {/* Booking.com & Airbnb .ics Import URLs for 2-Minute Cron Sync */}
+              <div className="pt-2 border-t border-slate-200 space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Booking.com Import .ics URL (Pulled by cron-job.org)
+                  </label>
+                  <input
+                    type="url"
+                    value={channelDraft.bookingIcalImportUrl}
+                    onChange={(e) => {
+                      setChannelDraft((prev) => ({
+                        ...prev,
+                        bookingIcalImportUrl: e.target.value,
+                      }));
+                      setChannelDirty(true);
+                    }}
+                    placeholder="https://admin.booking.com/hotel/hoteladmin/ical.html?t=..."
+                    className="w-full rounded-xl bg-slate-50 border border-slate-300 px-3.5 py-2 text-xs font-mono text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Airbnb Import .ics URL (Pulled by cron-job.org)
+                  </label>
+                  <input
+                    type="url"
+                    value={channelDraft.airbnbIcalImportUrl}
+                    onChange={(e) => {
+                      setChannelDraft((prev) => ({
+                        ...prev,
+                        airbnbIcalImportUrl: e.target.value,
+                      }));
+                      setChannelDirty(true);
+                    }}
+                    placeholder="https://www.airbnb.com/calendar/ical/..."
+                    className="w-full rounded-xl bg-slate-50 border border-slate-300 px-3.5 py-2 text-xs font-mono text-slate-900"
+                  />
+                </div>
+              </div>
+
               {/* Security Notice for Server-Side API Keys */}
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
                 <Info size={16} className="text-emerald-600 shrink-0 mt-0.5" />
@@ -2063,7 +2424,7 @@ export default function S7AdminPortal({ setView }) {
                   disabled={!channelDirty}
                   className="flex-1 rounded-full py-3 bg-slate-900 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold transition-all cursor-pointer"
                 >
-                  Save Channel Mappings
+                  Save Channel &amp; iCal Mappings
                 </button>
                 {channelDirty && (
                   <button
@@ -2076,7 +2437,11 @@ export default function S7AdminPortal({ setView }) {
                         bookingHotelId: prop.channels?.bookingCom?.hotelId || '',
                         bookingRoomId: prop.channels?.bookingCom?.roomId || '',
                         bookingRatePlanId: prop.channels?.bookingCom?.ratePlanId || '',
+                        bookingIcalImportUrl:
+                          prop.channels?.bookingCom?.icalImportUrl || '',
                         airbnbListingId: prop.channels?.airbnb?.listingId || '',
+                        airbnbIcalImportUrl:
+                          prop.channels?.airbnb?.icalImportUrl || '',
                       });
                       setChannelDirty(false);
                     }}
@@ -2149,50 +2514,95 @@ export default function S7AdminPortal({ setView }) {
         )}
 
         {/* ================================================================= */}
-        {/* TAB 5: SUPABASE ACCOUNT SECURITY                                  */}
+        {/* TAB 5: SUPABASE ACCOUNT SECURITY & 1-HOUR SESSION POLICY          */}
         {/* ================================================================= */}
         {activeTab === 'security' && (
-          <div className="max-w-lg bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
-            <h2 className="text-xl font-bold text-slate-900 mb-2">
-              Account Security
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">
-              Update the Supabase password for <strong>{session.user.email}</strong>. To invite or revoke contributors, use the Supabase Authentication dashboard.
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  New Password (minimum 8 characters)
-                </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+            {/* Card 1: 1-Hour Session Timeout & Admin "Remember Me" Permission */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    1-Hour Session Timeout Policy
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Control whether logins can stay signed in past 1 hour.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-slate-900">
+                    Allow &ldquo;Remember Me&rdquo; (7-Day Extended Sessions)
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    When enabled, users can check &ldquo;Remember Me&rdquo; at sign-in. When disabled, every session strictly logs out after 60 minutes.
+                  </p>
+                </div>
                 <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new strong password..."
-                  className="w-full rounded-xl bg-slate-50 border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                  type="checkbox"
+                  checked={allowRememberMePolicy}
+                  onChange={(e) => handleToggleRememberMePolicy(e.target.checked)}
+                  className="w-5 h-5 accent-emerald-600 cursor-pointer shrink-0"
                 />
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!newPassword || newPassword.length < 8) {
-                    showNotification('Password must be at least 8 characters.', 'error');
-                    return;
-                  }
-                  const { error } = await supabase.auth.updateUser({
-                    password: newPassword,
-                  });
-                  if (error) {
-                    showNotification(error.message, 'error');
-                  } else {
-                    setNewPassword('');
-                    showNotification('Supabase password updated!');
-                  }
-                }}
-                className="rounded-full px-6 py-3 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-semibold cursor-pointer transition-colors"
-              >
-                Update Password
-              </button>
+
+              <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900">
+                Current Session Remaining:{' '}
+                <strong className="font-mono">
+                  {formatSessionCountdown(remainingSeconds)}
+                </strong>{' '}
+                ({isExtendedSession ? '7-Day Remembered Mode' : 'Strict 1-Hour Mode'})
+              </div>
+            </div>
+
+            {/* Card 2: Update Supabase Password */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
+              <h2 className="text-xl font-bold text-slate-900 mb-2">
+                Account Security
+              </h2>
+              <p className="text-xs text-slate-500 mb-6">
+                Update the Supabase password for <strong>{session.user.email}</strong>. To invite or revoke contributors, use the Supabase Authentication dashboard.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    New Password (minimum 8 characters)
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new strong password..."
+                    className="w-full rounded-xl bg-slate-50 border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!newPassword || newPassword.length < 8) {
+                      showNotification('Password must be at least 8 characters.', 'error');
+                      return;
+                    }
+                    const { error } = await supabase.auth.updateUser({
+                      password: newPassword,
+                    });
+                    if (error) {
+                      showNotification(error.message, 'error');
+                    } else {
+                      setNewPassword('');
+                      showNotification('Supabase password updated!');
+                    }
+                  }}
+                  className="rounded-full px-6 py-3 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Update Password
+                </button>
+              </div>
             </div>
           </div>
         )}

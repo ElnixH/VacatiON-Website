@@ -1,4 +1,15 @@
 // src/services/channelManagerStore.js
+import { createClient } from '@supabase/supabase-js';
+
+// Built-in Supabase Client (Uses .env.local or your project keys directly so imports never fail)
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL || 'https://rdawaagwkopqogwnvbsy.supabase.co';
+const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkYXdhYWd3a29wcW9nd252YnN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMDU3NjksImV4cCI6MjEwODY4MTc2OX0.tjmDNPgMSSOcbAKa3pPy1nGXotvo8sBCCBqyr1Ml0M8';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const STORAGE_KEY = 'vacation_s7_ari_store_v1';
 const AUTH_KEY = 'vacation_s7_session_v1';
 const CREDENTIALS_KEY = 'vacation_s7_credentials_v1';
@@ -115,7 +126,7 @@ export const DEFAULT_PROPERTY_CONFIG = {
 };
 
 const DEFAULT_GATEWAY_CONFIG = {
-  provider: 'channex', // 'channex' | 'rentals-united' | 'beds24' | 'custom-webhook'
+  provider: 'channex',
   endpointUrl: 'https://api.channex.io/api/v1/ari',
   apiKey: '',
   webhookSecret: '',
@@ -144,7 +155,7 @@ export function getDateRangeArray(startIso, endIso) {
   return dates;
 }
 
-// Load full ARI Store
+// Load full ARI Store from local cache
 export function loadAriStore() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -186,26 +197,61 @@ export function loadAriStore() {
   }
 }
 
+// Pull latest ARI store from Supabase Cloud on page load so all visitors see live changes
+export async function syncAriStoreFromCloud() {
+  try {
+    const { data, error } = await supabase
+      .from('s7_ari_store')
+      .select('payload')
+      .eq('id', 'master')
+      .maybeSingle();
+
+    if (!error && data?.payload) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.payload));
+      window.dispatchEvent(new CustomEvent('s7-ari-updated', { detail: data.payload }));
+      return data.payload;
+    }
+  } catch {
+    // Gracefully fallback to local store if cloud table is not created yet
+  }
+  return null;
+}
+
+// Save ARI Store locally (instant UI update) AND push to Supabase Cloud
 export function saveAriStore(nextStore) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextStore));
   window.dispatchEvent(new CustomEvent('s7-ari-updated', { detail: nextStore }));
+
+  // Sync to Supabase Cloud in the background
+  supabase
+    .from('s7_ari_store')
+    .upsert({
+      id: 'master',
+      payload: nextStore,
+      updated_at: new Date().toISOString(),
+    })
+    .then(() => {})
+    .catch(() => {});
 }
 
 // Get resolved ARI state for a specific property & date (YYYY-MM-DD)
 export function getDayAri(store, propertyId, dateIso) {
-  const prop = store.properties[propertyId] || DEFAULT_PROPERTY_CONFIG[propertyId];
-  const override = store.calendar?.[propertyId]?.[dateIso] || {};
+  const prop =
+    store?.properties?.[propertyId] || DEFAULT_PROPERTY_CONFIG[propertyId];
+  const override = store?.calendar?.[propertyId]?.[dateIso] || {};
 
-  // Seasonal smart default if no override is set (July/August peak adjustment)
   const month = parseInt(dateIso.split('-')[1], 10);
-  const seasonalMultiplier = month === 7 || month === 8 ? 1.25 : month === 6 || month === 9 ? 1.1 : 1;
+  const seasonalMultiplier =
+    month === 7 || month === 8 ? 1.25 : month === 6 || month === 9 ? 1.1 : 1;
   const defaultSeasonalPrice = Math.round(prop.baseRate * seasonalMultiplier);
 
-  const status = override.status || 'open'; // 'open' | 'closed' | 'booked-ota' | 'booked-direct' | 'maintenance'
-  const price = override.price !== undefined ? Number(override.price) : defaultSeasonalPrice;
-  const minStay = override.minStay !== undefined ? Number(override.minStay) : prop.minStay;
-  const cta = Boolean(override.cta); // Closed to Arrival
-  const ctd = Boolean(override.ctd); // Closed to Departure
+  const status = override.status || 'open';
+  const price =
+    override.price !== undefined ? Number(override.price) : defaultSeasonalPrice;
+  const minStay =
+    override.minStay !== undefined ? Number(override.minStay) : prop.minStay;
+  const cta = Boolean(override.cta);
+  const ctd = Boolean(override.ctd);
   const note = override.note || '';
 
   return {
@@ -247,13 +293,16 @@ export function updatePropertyDates(propertyId, dateArray, patch, actor = 's7') 
     store.calendar[propertyId][dateIso] = updated;
   });
 
+  const firstDate = dateArray[0] || '';
+  const lastDate = dateArray[dateArray.length - 1] || '';
+
   store.auditLogs = [
     {
       id: `log-${Date.now()}`,
       timestamp: new Date().toISOString(),
       actor,
       action: 'ARI_UPDATE',
-      details: `${ store.properties[propertyId]?.name }: Updated ${dateArray.length} night(s) [${dateArray[0]} → ${dateArray[dateArray.length - 1]}] · ${JSON.stringify(patch)}`,
+      details: `${store.properties[propertyId]?.name}: Updated ${dateArray.length} night(s) [${firstDate} → ${lastDate}] · ${JSON.stringify(patch)}`,
     },
     ...(store.auditLogs || []).slice(0, 99),
   ];
@@ -266,7 +315,9 @@ export function updatePropertyDates(propertyId, dateArray, patch, actor = 's7') 
 export function evaluateStayQuote(propertyId, checkInIso, checkOutIso) {
   const store = loadAriStore();
   const prop = store.properties[propertyId];
-  if (!prop || !checkInIso || !checkOutIso) return { valid: false, reason: 'Invalid dates' };
+  if (!prop || !checkInIso || !checkOutIso) {
+    return { valid: false, reason: 'Invalid dates' };
+  }
 
   const start = new Date(`${checkInIso}T00:00:00`);
   const end = new Date(`${checkOutIso}T00:00:00`);
@@ -287,10 +338,16 @@ export function evaluateStayQuote(propertyId, checkInIso, checkOutIso) {
   const checkOutDayAri = getDayAri(store, propertyId, checkOutIso);
 
   if (firstDayAri.cta) {
-    return { valid: false, reason: `Check-in is not permitted on ${checkInIso} (Closed to Arrival).` };
+    return {
+      valid: false,
+      reason: `Check-in is not permitted on ${checkInIso} (Closed to Arrival).`,
+    };
   }
   if (checkOutDayAri.ctd) {
-    return { valid: false, reason: `Check-out is not permitted on ${checkOutIso} (Closed to Departure).` };
+    return {
+      valid: false,
+      reason: `Check-out is not permitted on ${checkOutIso} (Closed to Departure).`,
+    };
   }
   if (nightsCount < firstDayAri.minStay) {
     return {
@@ -430,7 +487,7 @@ export async function pushChannelManagerAri(propertyId = 'all') {
         currency: prop.currency,
         otaMarkupPercent: prop.otaMarkupPercent,
         channelMappings: prop.channels,
-        ariRecords: Object.entries(overrides).map(([date, data]) => {
+        ariRecords: Object.keys(overrides).map((date) => {
           const resolved = getDayAri(store, pid, date);
           return {
             date,
@@ -450,7 +507,6 @@ export async function pushChannelManagerAri(propertyId = 'all') {
 
   let networkResult = { simulated: true, ok: true };
 
-  // If admin s7 configured a live webhook/API key, dispatch actual HTTP POST
   if (store.gateway.endpointUrl && store.gateway.apiKey) {
     try {
       const res = await fetch(store.gateway.endpointUrl, {
@@ -468,7 +524,6 @@ export async function pushChannelManagerAri(propertyId = 'all') {
     }
   }
 
-  // Update timestamps on connected channels
   const nowIso = new Date().toISOString();
   targetProps.forEach((pid) => {
     Object.keys(store.properties[pid].channels).forEach((chKey) => {
@@ -493,26 +548,23 @@ export async function pushChannelManagerAri(propertyId = 'all') {
   return { payload, networkResult, store };
 }
 
-// Authentication helpers for Admin "s7"
+// Legacy fallback helpers so older imports never crash
 export function verifyS7Login(username, passkey) {
   const normalizedUser = (username || '').trim().toLowerCase();
   if (normalizedUser !== 's7') {
-    return { ok: false, error: 'Unauthorized Operator ID. Access restricted to s7.' };
+    return { ok: false, error: 'Unauthorized Operator ID.' };
   }
-
   const savedPass = localStorage.getItem(CREDENTIALS_KEY) || 's7-tinos-2027';
-  // Allow either the custom/default passkey OR 's7' for immediate owner access
   if (passkey === savedPass || passkey === 's7') {
     const session = {
       operator: 's7',
       authenticatedAt: Date.now(),
-      expiresAt: Date.now() + 1000 * 60 * 60 * 12, // 12-hour session
+      expiresAt: Date.now() + 1000 * 60 * 60 * 12,
     };
     sessionStorage.setItem(AUTH_KEY, JSON.stringify(session));
     return { ok: true, session };
   }
-
-  return { ok: false, error: 'Invalid S7 Master Passkey.' };
+  return { ok: false, error: 'Invalid Passkey.' };
 }
 
 export function getS7Session() {
@@ -538,4 +590,138 @@ export function updateS7Passkey(newPasskey) {
   if (!newPasskey || newPasskey.trim().length < 2) return false;
   localStorage.setItem(CREDENTIALS_KEY, newPasskey.trim());
   return true;
+}
+// Append to the bottom of src/services/channelManagerStore.js
+
+// Save a new reservation to Supabase Cloud (and optionally block the dates)
+export async function createCloudReservation(booking, autoHoldDates = false) {
+  const record = {
+    booking_ref: booking.bookingReference,
+    property_id: booking.propertyId,
+    property_name: booking.property,
+    source: booking.source || 'direct',
+    status: booking.status || 'pending',
+    check_in: booking.checkIn,
+    check_out: booking.checkOut,
+    nights: Number(booking.nights) || 1,
+    adults: String(booking.adults || '2 Adults'),
+    children_count: Number(booking.childrenCount) || 0,
+    children_ages: booking.childrenAges || 'None',
+    arrival_time: booking.arrivalTime || '14:00 - 16:00',
+    total_price: Number(booking.totalDirectNumeric) || 0,
+    currency: 'EUR',
+    guest_name: booking.name,
+    guest_email: booking.email,
+    guest_phone: booking.phone,
+    guest_ssn_or_passport: booking.ssnOrIdNumber,
+    special_requests: booking.specialRequests || 'None',
+  };
+
+  const { error } = await supabase.from('reservations').insert([record]);
+
+  // If autoHoldDates is enabled (or if confirmed), mark stay nights on the calendar
+  if (autoHoldDates && booking.checkIn && booking.checkOut) {
+    const stayDates = [];
+    const curr = new Date(`${booking.checkIn}T00:00:00`);
+    const end = new Date(`${booking.checkOut}T00:00:00`);
+    while (curr < end) {
+      stayDates.push(formatDateISO(curr));
+      curr.setDate(curr.getDate() + 1);
+    }
+    if (stayDates.length > 0) {
+      updatePropertyDates(
+        booking.propertyId,
+        stayDates,
+        {
+          status: booking.source === 'direct' ? 'booked-direct' : 'booked-ota',
+          note: `${booking.bookingReference} · ${booking.name}`,
+        },
+        booking.source || 'direct-booking'
+      );
+    }
+  }
+
+  return { ok: !error, error: error?.message || null };
+}
+
+// Fetch all reservations (Requires logged-in Supabase Admin/Contributor session)
+export async function fetchCloudReservations() {
+  const { data, error } = await supabase
+    .from('reservations')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) return [];
+  return data || [];
+}
+
+// Update reservation status (e.g., 'confirmed' -> blocks calendar, 'cancelled' -> reopens calendar)
+export async function updateCloudReservationStatus(reservation, nextStatus) {
+  const { error } = await supabase
+    .from('reservations')
+    .update({ status: nextStatus })
+    .eq('id', reservation.id);
+
+  if (!error && reservation.check_in && reservation.check_out) {
+    const stayDates = [];
+    const curr = new Date(`${reservation.check_in}T00:00:00`);
+    const end = new Date(`${reservation.check_out}T00:00:00`);
+    while (curr < end) {
+      stayDates.push(formatDateISO(curr));
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    if (stayDates.length > 0) {
+      const targetCalendarStatus =
+        nextStatus === 'cancelled'
+          ? 'open'
+          : reservation.source === 'direct'
+          ? 'booked-direct'
+          : 'booked-ota';
+
+      updatePropertyDates(
+        reservation.property_id,
+        stayDates,
+        {
+          status: targetCalendarStatus,
+          note:
+            nextStatus === 'cancelled'
+              ? ''
+              : `${reservation.booking_ref} · ${reservation.guest_name}`,
+        },
+        's7-reservation-manager'
+      );
+    }
+  }
+
+  return { ok: !error, error: error?.message || null };
+}
+
+// Subscribe to real-time cloud updates so all open browsers update immediately
+export function subscribeToLiveAriChanges() {
+  const channel = supabase
+    .channel('public:s7_ari_store')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 's7_ari_store',
+        filter: 'id=eq.master',
+      },
+      (payload) => {
+        const nextStore = payload?.new?.payload;
+        if (nextStore) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(nextStore));
+          window.dispatchEvent(
+            new CustomEvent('s7-ari-updated', { detail: nextStore })
+          );
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

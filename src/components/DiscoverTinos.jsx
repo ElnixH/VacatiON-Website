@@ -1,5 +1,5 @@
 // src/components/DiscoverTinos.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -13,38 +13,27 @@ import {
 import { TINOS_ATTRACTIONS, useLanguage } from '../data/siteData';
 import SmoothImage from './SmoothImage';
 
-const ISLAND_METRICS = [
-  {
-    figure: '40+',
-    label: 'Traditional Marble Villages',
-    detail: 'Connected by ancient stone footpaths',
-  },
-  {
-    figure: '750+',
-    label: 'Historic Cycladic Chapels',
-    detail: 'Dotting the hills & coastal cliffs',
-  },
-  {
-    figure: 'UNESCO',
-    label: 'Intangible Marble Heritage',
-    detail: 'Home of master sculptors in Pyrgos',
-  },
-  {
-    figure: '15 Min',
-    label: 'Ferry From Mykonos',
-    detail: 'Easy access, worlds away from crowds',
-  },
-];
-
 export default function DiscoverTinos({ setView }) {
   const { t } = useLanguage();
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'villages' | 'beaches'
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY || 0);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const goHome = () => {
     setView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Smooth scroll-linked blend factor (0 at top -> 1 at 550px scroll)
+  const scrollProgress = Math.min(scrollY / 550, 1);
 
   return (
     <div className="relative min-h-screen bg-[#FAF9F6] text-[#191D30] pb-32">
@@ -100,9 +89,9 @@ export default function DiscoverTinos({ setView }) {
                     setSelectedLocation(null);
                     setView('reserve');
                   }}
-                  className="rounded-full bg-[#191D30] hover:bg-[#A18E7E] text-white px-6 py-3 font-body text-[10px] tracking-[0.22em] uppercase inline-flex items-center gap-2 transition-all"
+                  className="rounded-full bg-[#191D30] hover:bg-[#A18E7E] text-white px-6 py-3 font-body text-[10px] tracking-[0.22em] uppercase inline-flex items-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>Reserve Your Stay Nearby</span>
+                  <span>{t.tinosPage.reserveNearby}</span>
                   <ArrowUpRight size={14} />
                 </button>
               </div>
@@ -111,68 +100,91 @@ export default function DiscoverTinos({ setView }) {
         </div>
       )}
 
-      {/* 1. HIGH-CONTRAST EDITORIAL HERO (Fixes washed-out white text over white buildings) */}
-      <section className="relative h-[82vh] min-h-[580px] w-full flex flex-col justify-between overflow-hidden bg-[#191D30]">
-        <div className="absolute inset-0 z-0">
+      {/* 1. FULLSCREEN 100VH HERO WITH SEAMLESS SCROLL BLEND INTO #FAF9F6 */}
+      <section className="relative h-screen min-h-[720px] w-full flex flex-col justify-between overflow-hidden bg-[#191D30]">
+        {/* Parallax & Scroll-Blending Background Image */}
+        <div
+          className="absolute inset-0 z-0 transition-transform duration-150 ease-out"
+          style={{
+            transform: `translate3d(0, ${scrollY * 0.22}px, 0) scale(${
+              1.05 + scrollProgress * 0.04
+            })`,
+          }}
+        >
           <SmoothImage
             src={TINOS_ATTRACTIONS.hero}
             alt="Tinos Island Chora & Aegean Sea"
             eager={true}
             containerClassName="w-full h-full rounded-none"
-            className="w-full h-full object-cover rounded-none scale-105"
+            className="w-full h-full object-cover rounded-none"
           />
-          {/* Deep Multi-Stop Contrast Vignette so white typography is 100% legible */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#191D30]/80 via-[#191D30]/55 to-[#191D30]/95" />
+          {/* Rich Contrast Layer for Text Readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#191D30]/75 via-[#191D30]/45 to-[#191D30]/85" />
         </div>
 
+        {/* Seamless Bottom Blend Veil that Melts the Hero into #FAF9F6 as You Scroll */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-56 z-10 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(250,249,246,0) 0%, rgba(250,249,246,0.45) 55%, #FAF9F6 100%)',
+          }}
+        />
+
         {/* Top Bar with Back Pill Button */}
-        <div className="relative z-20 max-w-[1440px] mx-auto w-full px-6 sm:px-10 md:px-14 pt-24 flex items-center justify-between">
+        <div className="relative z-20 max-w-[1440px] mx-auto w-full px-6 sm:px-10 md:px-14 pt-10 sm:pt-12 flex items-center justify-between">
           <button
             onClick={goHome}
             className="rounded-full px-5 py-2.5 bg-white/10 hover:bg-white text-white hover:text-[#191D30] border border-white/25 font-body text-[10px] tracking-[0.25em] uppercase inline-flex items-center gap-2.5 transition-all cursor-pointer"
           >
             <ArrowLeft size={14} />
-            <span>Back to Sanctuaries</span>
+            <span>{t.tinosPage.back}</span>
           </button>
 
-          <div className="hidden sm:flex items-center gap-2 font-body text-[10px] tracking-[0.28em] text-[#A18E7E] uppercase">
-            <Compass size={14} />
+          <div className="hidden sm:flex items-center gap-2 font-body text-[10px] tracking-[0.28em] text-white/80 uppercase">
+            <Compass size={14} className="text-[#A18E7E]" />
             <span>37°32′N 25°09′E · CYCLADES, GREECE</span>
           </div>
         </div>
 
-        {/* Center Hero Typography with Strong Contrast Backdrop */}
-        <div className="relative z-20 max-w-4xl mx-auto px-6 text-center my-auto">
-          <div className="inline-flex items-center gap-3 px-4 py-1.5 border border-[#A18E7E]/50 bg-[#191D30]/60 rounded-full mb-6">
+        {/* Center Hero Typography */}
+        <div
+          className="relative z-20 max-w-4xl mx-auto px-6 text-center my-auto transition-all duration-200"
+          style={{
+            opacity: Math.max(1 - scrollProgress * 1.15, 0),
+            transform: `translate3d(0, ${-scrollY * 0.12}px, 0)`,
+          }}
+        >
+          <div className="inline-flex items-center gap-3 px-4 py-1.5 border border-[#A18E7E]/60 bg-[#191D30]/65 rounded-full mb-6">
             <Sparkles size={12} className="text-[#A18E7E]" />
             <span className="font-body text-[10px] tracking-[0.32em] text-white uppercase">
-              The Island of Marble &amp; Light
+              {t.tinosPage.badge}
             </span>
           </div>
 
           <h1 className="font-display text-5xl sm:text-6xl md:text-7xl tracking-[0.35em] text-white uppercase mb-6 drop-shadow-xl">
-            Tinos
+            {t.tinosPage.title}
           </h1>
 
           <div className="w-14 h-[1px] bg-[#A18E7E] mx-auto mb-6" />
 
-          <p className="font-body text-xs sm:text-sm md:text-base leading-[2] tracking-[0.22em] text-white/95 uppercase max-w-2xl mx-auto drop-shadow-md">
-            The hidden muse of the Cyclades. <br />A sanctuary of marble, wind, and wild beauty.
+          <p className="font-body text-xs sm:text-sm md:text-base leading-[2] tracking-[0.22em] text-white uppercase max-w-2xl mx-auto drop-shadow-md whitespace-pre-line">
+            {t.tinosPage.subtitle}
           </p>
         </div>
 
-        {/* Bottom Architectural Stat Strip (Replaces the pale white boxes) */}
-        <div className="relative z-20 bg-[#191D30] border-t border-white/15">
-          <div className="max-w-[1440px] mx-auto px-6 sm:px-10 md:px-14 grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10">
-            {ISLAND_METRICS.map((item) => (
-              <div key={item.label} className="py-6 sm:px-6 first:pl-0 last:pr-0">
+        {/* Bottom Floating Metrics Row (Blends Smoothly into #FAF9F6) */}
+        <div className="relative z-20 max-w-[1440px] mx-auto w-full px-6 sm:px-10 md:px-14 pb-10">
+          <div className="bg-[#191D30]/85 backdrop-blur-md border border-white/15 shadow-2xl grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10">
+            {t.tinosPage.metrics.map((item) => (
+              <div key={item.label} className="p-6">
                 <p className="font-display text-2xl sm:text-3xl text-[#A18E7E] tracking-wider mb-1">
                   {item.figure}
                 </p>
                 <p className="font-body text-[10px] font-medium tracking-[0.2em] text-white uppercase">
                   {item.label}
                 </p>
-                <p className="font-body text-[11px] text-white/50 mt-0.5 hidden sm:block">
+                <p className="font-body text-[11px] text-white/60 mt-0.5 hidden sm:block">
                   {item.detail}
                 </p>
               </div>
@@ -188,21 +200,17 @@ export default function DiscoverTinos({ setView }) {
             <div className="flex items-center gap-4">
               <div className="w-8 h-[1px] bg-[#A18E7E]" />
               <span className="font-body text-[10px] tracking-[0.3em] text-[#A18E7E] uppercase">
-                RAW &amp; AUTHENTIC CYCLADES
+                {t.tinosPage.introEyebrow}
               </span>
             </div>
 
             <h2 className="font-display text-3xl sm:text-4xl md:text-5xl text-[#191D30] leading-[1.18]">
-              An island kept as a secret among artists &amp; connoisseurs
+              {t.tinosPage.introTitle}
             </h2>
 
             <div className="font-body font-light text-xs sm:text-[14px] leading-[2.1] text-[#191D30]/80 space-y-5">
-              <p>
-                Located in the heart of the Cyclades just 15 minutes by ferry from Mykonos, Tinos embodies a laid-back, grounded glamour not found anywhere else in the Aegean.
-              </p>
-              <p>
-                On this island, all your senses are magnified by its contrasts: lush terraced hills against the lunar granite boulders of Volax, UNESCO-protected marble artistry in Pyrgos, and unspoiled golden shores where the water mirrors the sky.
-              </p>
+              <p>{t.tinosPage.introP1}</p>
+              <p>{t.tinosPage.introP2}</p>
             </div>
 
             <div className="pt-4">
@@ -211,7 +219,7 @@ export default function DiscoverTinos({ setView }) {
                 className="group inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="rounded-full bg-[#191D30] group-hover:bg-[#A18E7E] text-white px-7 py-3.5 font-body text-xs tracking-[0.12em] uppercase transition-all">
-                  Plan Your Tinos Escape
+                  {t.tinosPage.planBtn}
                 </span>
                 <span className="w-11 h-11 rounded-full bg-[#191D30] group-hover:bg-[#A18E7E] text-white flex items-center justify-center transition-all group-hover:rotate-45">
                   <ArrowUpRight size={16} />
@@ -246,19 +254,18 @@ export default function DiscoverTinos({ setView }) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-12 border-b border-[#191D30]/10 mb-16">
           <div>
             <span className="font-body text-[10px] tracking-[0.3em] text-[#A18E7E] uppercase block mb-3">
-              CURATED ISLAND COMPASS
+              {t.tinosPage.compassEyebrow}
             </span>
             <h2 className="font-display text-3xl sm:text-4xl text-[#191D30]">
-              Sacred Villages &amp; Untamed Shores
+              {t.tinosPage.compassTitle}
             </h2>
           </div>
 
-          {/* Filter Pills */}
           <div className="flex items-center gap-2 bg-white border border-[#191D30]/15 rounded-full p-1.5 self-start">
             {[
-              { id: 'all', label: 'All Highlights' },
-              { id: 'villages', label: 'Marble Villages', icon: Landmark },
-              { id: 'beaches', label: 'Aegean Beaches', icon: Waves },
+              { id: 'all', label: t.tinosPage.filterAll },
+              { id: 'villages', label: t.tinosPage.filterVillages },
+              { id: 'beaches', label: t.tinosPage.filterBeaches },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -275,17 +282,13 @@ export default function DiscoverTinos({ setView }) {
           </div>
         </div>
 
-        {/* Historic Villages Grid */}
         {(activeFilter === 'all' || activeFilter === 'villages') && (
           <div className="mb-24">
             <div className="flex items-center justify-between mb-8">
               <h3 className="font-display text-xl tracking-[0.15em] text-[#191D30] uppercase flex items-center gap-2.5">
                 <Landmark size={18} className="text-[#A18E7E]" />
-                <span>I. The Historic Villages</span>
+                <span>{t.tinosPage.villagesHeading}</span>
               </h3>
-              <span className="font-body text-xs text-[#191D30]/55">
-                Click any destination to read the full story
-              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -304,7 +307,7 @@ export default function DiscoverTinos({ setView }) {
                         className="w-full h-full object-cover rounded-none transition-transform duration-[1500ms] group-hover:scale-105"
                       />
                       <div className="absolute top-4 left-4 bg-[#191D30]/90 text-white px-3 py-1 font-body text-[10px] tracking-[0.2em] uppercase">
-                        0{idx + 1} · Village
+                        0{idx + 1}
                       </div>
                     </div>
 
@@ -323,10 +326,10 @@ export default function DiscoverTinos({ setView }) {
 
                   <div className="px-7 pb-6 pt-3 border-t border-[#191D30]/10 flex items-center justify-between text-[10px] font-body tracking-[0.2em] uppercase text-[#191D30]">
                     <span className="flex items-center gap-1.5 text-[#A18E7E]">
-                      <MapPin size={12} /> Tinos Highlands
+                      <MapPin size={12} /> Tinos
                     </span>
                     <span className="group-hover:translate-x-1 transition-transform">
-                      Read Guide →
+                      {t.tinosPage.readGuide}
                     </span>
                   </div>
                 </div>
@@ -335,17 +338,13 @@ export default function DiscoverTinos({ setView }) {
           </div>
         )}
 
-        {/* Aegean Beaches Grid */}
         {(activeFilter === 'all' || activeFilter === 'beaches') && (
           <div>
             <div className="flex items-center justify-between mb-8">
               <h3 className="font-display text-xl tracking-[0.15em] text-[#191D30] uppercase flex items-center gap-2.5">
                 <Waves size={18} className="text-[#A18E7E]" />
-                <span>II. The Untamed Shores</span>
+                <span>{t.tinosPage.beachesHeading}</span>
               </h3>
-              <span className="font-body text-xs text-[#191D30]/55">
-                Crystal-clear bays &amp; surf coves
-              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -364,7 +363,7 @@ export default function DiscoverTinos({ setView }) {
                         className="w-full h-full object-cover rounded-none transition-transform duration-[1500ms] group-hover:scale-105"
                       />
                       <div className="absolute top-4 left-4 bg-[#191D30]/90 text-white px-3 py-1 font-body text-[10px] tracking-[0.2em] uppercase">
-                        0{idx + 1} · Coastline
+                        0{idx + 1}
                       </div>
                     </div>
 
@@ -383,10 +382,10 @@ export default function DiscoverTinos({ setView }) {
 
                   <div className="px-7 pb-6 pt-3 border-t border-[#191D30]/10 flex items-center justify-between text-[10px] font-body tracking-[0.2em] uppercase text-[#191D30]">
                     <span className="flex items-center gap-1.5 text-[#A18E7E]">
-                      <Waves size={12} /> Aegean Shore
+                      <Waves size={12} /> Tinos
                     </span>
                     <span className="group-hover:translate-x-1 transition-transform">
-                      Explore Bay →
+                      {t.tinosPage.exploreBay}
                     </span>
                   </div>
                 </div>

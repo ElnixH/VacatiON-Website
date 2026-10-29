@@ -1,5 +1,6 @@
 // src/components/Hero.jsx
-import { ArrowUpRight, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowUpRight } from 'lucide-react';
 import { BRAND_ASSETS, useLanguage } from '../data/siteData';
 import SmoothImage from './SmoothImage';
 
@@ -7,6 +8,37 @@ const GUEST_INITIALS = ['C', 'M', 'S', 'J'];
 
 export default function Hero({ setView }) {
   const { t } = useLanguage();
+  const [tinosTime, setTinosTime] = useState('');
+  const [weatherTemp, setWeatherTemp] = useState('24°C');
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      const formatted = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Athens',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(now);
+      setTinosTime(formatted);
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    fetch(
+      'https://api.open-meteo.com/v1/forecast?latitude=37.5376&longitude=25.1634&current_weather=true'
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.current_weather?.temperature !== undefined) {
+          setWeatherTemp(`${Math.round(data.current_weather.temperature)}°C`);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const scrollToCollection = () => {
     const el = document.getElementById('collection');
@@ -35,12 +67,19 @@ export default function Hero({ setView }) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#191D30]/90 via-[#191D30]/30 to-[#191D30]/35" />
       </div>
 
+      {/* Top-Left Weather & Time (Slightly below header, zero background box) */}
+      <div className="absolute top-24 md:top-28 left-6 sm:left-10 md:left-14 z-20 flex items-center gap-3 font-body text-[11px] tracking-[0.25em] uppercase text-white/90 select-none">
+        <span>{weatherTemp}</span>
+        <span className="text-white/40">|</span>
+        <span>{tinosTime}</span>
+      </div>
+
       {/* Main Lower Editorial Container (Palmora Layout) */}
       <div className="relative z-20 max-w-[1440px] mx-auto w-full px-6 sm:px-10 md:px-14 pb-12 sm:pb-16 md:pb-20">
         {/* Trust Avatar Cluster (Above Headline on Left) */}
         <div className="mb-8 sm:mb-10 flex flex-col items-start">
           <div className="flex items-center -space-x-2.5 mb-3">
-            {GUEST_INITIALS.map((initial, i) => (
+            {GUEST_INITIALS.map((initial) => (
               <div
                 key={initial}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#191D30] border-2 border-[#A18E7E] text-white font-display text-xs flex items-center justify-center shadow-md"
@@ -53,9 +92,9 @@ export default function Hero({ setView }) {
             </div>
           </div>
 
-          <p className="font-body text-[11px] sm:text-xs text-white/80 leading-relaxed max-w-[230px]">
-            Trusted by Guests Who Believe <br />
-            in Authentic Cycladic Care
+          <p className="font-body text-[11px] sm:text-xs text-white/80 leading-relaxed max-w-[260px]">
+            {t.hero.trustLine1} <br />
+            {t.hero.trustLine2}
           </p>
         </div>
 
@@ -63,13 +102,13 @@ export default function Hero({ setView }) {
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 lg:gap-12 pt-2">
           <div className="max-w-2xl">
             <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-[54px] text-white tracking-[0.02em] leading-[1.14] font-normal mb-5">
-              Discover the perfect <br />
-              blend of luxury &amp; <br />
-              comfort on Tinos Island
+              {t.hero.titleLine1} <br />
+              {t.hero.titleLine2} <br />
+              {t.hero.titleLine3}
             </h1>
 
             <p className="font-body font-light text-xs sm:text-sm text-white/75 leading-relaxed max-w-md">
-              Enjoy your vacation &amp; experience the ultimate in Cycladic luxury and serenity as you relax and unwind above the Aegean Sea.
+              {t.hero.subtitle}
             </p>
           </div>
 

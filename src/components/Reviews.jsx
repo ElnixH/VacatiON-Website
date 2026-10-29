@@ -1,167 +1,305 @@
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, ExternalLink, Star } from 'lucide-react';
+// src/components/Reviews.jsx
+import { useState, useMemo } from 'react';
+import { Star, ExternalLink, ArrowUpRight, Plus, Check } from 'lucide-react';
 import {
-  BOOKING_REVIEWS,
   BRAND_ASSETS,
   PROPERTIES,
   useLanguage,
+  getLocalizedReviews,
+  getLocalizedProperty,
 } from '../data/siteData';
-import SmoothImage from './SmoothImage';
+
+const BOOKING_MENTION_TOPICS = {
+  en: [
+    { id: 'all', label: 'All Reviews', count: 104, keywords: [] },
+    { id: 'views', label: 'Aegean & Island Views', count: 38, keywords: ['view', 'island', 'infinity', 'panorama'] },
+    { id: 'host', label: 'Host & Hospitality', count: 44, keywords: ['host', 'hospitality', 'welcomed', 'fantastic', 'care'] },
+    { id: 'clean', label: 'Spotless Cleanliness', count: 36, keywords: ['clean', 'spotless', 'lovely'] },
+    { id: 'pool', label: 'Infinity Pool & Terrace', count: 29, keywords: ['pool', 'terrace', 'bubbly'] },
+    { id: 'comfort', label: 'Comfort & Beds', count: 31, keywords: ['comfortable', 'amenities', 'ensuite', 'layout'] },
+    { id: 'location', label: 'Peaceful Location', count: 27, keywords: ['beach', 'town', 'peace', 'quiet', 'arnados'] },
+  ],
+  it: [
+    { id: 'all', label: 'Tutte le Recensioni', count: 104, keywords: [] },
+    { id: 'views', label: 'Vista Mare e Isole', count: 38, keywords: ['vista', 'isole', 'sfioro'] },
+    { id: 'host', label: 'Host e Ospitalità', count: 44, keywords: ['host', 'ospitalità', 'accolto', 'fantastico'] },
+    { id: 'clean', label: 'Pulizia Impeccabile', count: 36, keywords: ['pulit', 'incantevole', 'impeccabil'] },
+    { id: 'pool', label: 'Piscina Infinity', count: 29, keywords: ['piscina', 'terrazza', 'bollicine'] },
+    { id: 'comfort', label: 'Comfort e Camere', count: 31, keywords: ['confortevole', 'servizi', 'bagno', 'layout'] },
+    { id: 'location', label: 'Posizione Tranquilla', count: 27, keywords: ['spiaggia', 'chora', 'pace', 'arnados'] },
+  ],
+  el: [
+    { id: 'all', label: 'Όλες οι Κριτικές', count: 104, keywords: [] },
+    { id: 'views', label: 'Θέα στο Αιγαίο', count: 38, keywords: ['θέα', 'νησιά', 'infinity'] },
+    { id: 'host', label: 'Οικοδεσπότες & Φιλοξενία', count: 44, keywords: ['οικοδεσπότ', 'φιλοξενία', 'υποδέχθηκαν'] },
+    { id: 'clean', label: 'Άψογη Καθαριότητα', count: 36, keywords: ['καθαρ', 'υπέροχη'] },
+    { id: 'pool', label: 'Πισίνα Infinity & Βεράντα', count: 29, keywords: ['πισίνα', 'βεράντα'] },
+    { id: 'comfort', label: 'Άνεση & Παροχές', count: 31, keywords: ['άνετ', 'παροχές', 'υπνοδωμάτια'] },
+    { id: 'location', label: 'Ήσυχη Τοποθεσία', count: 27, keywords: ['παραλία', 'χώρα', 'Αρνάδο'] },
+  ],
+};
 
 export default function Reviews() {
-  const { t } = useLanguage();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [showAllGrid, setShowAllGrid] = useState(false);
+  const { lang, t } = useLanguage();
+  const [activeMention, setActiveMention] = useState('all');
 
-  const currentReview = BOOKING_REVIEWS[activeIndex] || BOOKING_REVIEWS[0];
-  const linkedProperty =
-    PROPERTIES[currentReview.propertyId] || PROPERTIES['villa-leonora'];
+  const localizedReviews = getLocalizedReviews(lang);
+  const mentionTopics = BOOKING_MENTION_TOPICS[lang] || BOOKING_MENTION_TOPICS.en;
 
-  const handlePrev = () => {
-    setActiveIndex(
-      (prev) => (prev - 1 + BOOKING_REVIEWS.length) % BOOKING_REVIEWS.length
-    );
-  };
+  const filteredReviews = useMemo(() => {
+    if (activeMention === 'all') return localizedReviews;
+    const topicObj = mentionTopics.find((m) => m.id === activeMention);
+    if (!topicObj || !topicObj.keywords.length) return localizedReviews;
 
-  const handleNext = () => {
-    setActiveIndex((prev) => (prev + 1) % BOOKING_REVIEWS.length);
-  };
+    const matches = localizedReviews.filter((r) => {
+      const combined = `${r.text} ${r.title} ${r.highlight}`.toLowerCase();
+      return topicObj.keywords.some((kw) => combined.includes(kw.toLowerCase()));
+    });
+
+    return matches.length > 0 ? matches : localizedReviews;
+  }, [activeMention, localizedReviews, mentionTopics]);
+
+  // Ensure enough cards for continuous marquee movement
+  const marqueeRow1 = [...filteredReviews, ...filteredReviews, ...filteredReviews];
+  const marqueeRow2 = [
+    ...filteredReviews.slice().reverse(),
+    ...filteredReviews.slice().reverse(),
+    ...filteredReviews.slice().reverse(),
+  ];
+
+  const headlineTop =
+    lang === 'el'
+      ? 'Λόγια εκτίμησης από επισκέπτες'
+      : lang === 'it'
+      ? 'Parole di apprezzamento da chi'
+      : 'Words of praise from guests';
+
+  const headlineAccent =
+    lang === 'el'
+      ? 'που έζησαν την εμπειρία μας'
+      : lang === 'it'
+      ? 'ha vissuto le nostre dimore'
+      : 'who experienced our sanctuaries';
+
+  const mentionsTitle =
+    lang === 'el'
+      ? 'Επιλέξτε θέμα για να διαβάσετε κριτικές:'
+      : lang === 'it'
+      ? 'Seleziona gli argomenti per leggere le recensioni:'
+      : 'Select topics to read verified Booking.com reviews:';
 
   return (
-    <section className="py-24 md:py-32 bg-white overflow-hidden">
-      <div className="max-w-[1440px] mx-auto px-6 md:px-12">
-        {/* Reference-Inspired Editorial Testimonial Feature */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center mb-20">
-          {/* Left Sharp-Cornered Square/Portrait Photo */}
-          <div className="lg:col-span-5">
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-none bg-[#191D30]/5">
-              <SmoothImage
-                src={linkedProperty.coverImage}
-                alt={currentReview.propertyName}
-                containerClassName="w-full h-full rounded-none"
-                className="w-full h-full object-cover rounded-none"
-              />
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#191D30]/90 to-transparent">
-                <p className="font-body text-[10px] tracking-[0.25em] text-[#A18E7E] uppercase">
-                  Verified Booking.com Score · {currentReview.score} / 10
-                </p>
-                <p className="font-display text-lg text-white tracking-[0.1em] uppercase mt-1">
-                  {currentReview.propertyName}
-                </p>
-              </div>
-            </div>
+    <section
+      id="reviews"
+      className="py-24 md:py-32 bg-[#FAF9F6] text-[#191D30] overflow-hidden relative"
+    >
+      {/* Continuous Marquee Keyframes — Never stops moving */}
+      <style>{`
+        @keyframes vacationMarqueeLeft {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(-33.333%, 0, 0); }
+        }
+        @keyframes vacationMarqueeRight {
+          0% { transform: translate3d(-33.333%, 0, 0); }
+          100% { transform: translate3d(0, 0, 0); }
+        }
+        .animate-marquee-left {
+          display: flex;
+          width: max-content;
+          animation: vacationMarqueeLeft 44s linear infinite;
+          will-change: transform;
+        }
+        .animate-marquee-right {
+          display: flex;
+          width: max-content;
+          animation: vacationMarqueeRight 48s linear infinite;
+          will-change: transform;
+        }
+      `}</style>
+
+      <div className="max-w-[1380px] mx-auto px-6 md:px-12 mb-14">
+        <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#191D30] text-white px-4 py-2 shadow-sm mb-6">
+            <Star size={12} className="fill-[#A18E7E] text-[#A18E7E]" />
+            <span className="font-body text-[10px] tracking-[0.2em] uppercase">
+              {t.reviews.eyebrow}
+            </span>
           </div>
 
-          {/* Right Editorial Quote Block with Circular Navigation Buttons */}
-          <div className="lg:col-span-7 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-[1px] bg-[#A18E7E]" />
-                <span className="font-body text-[11px] tracking-[0.3em] text-[#A18E7E] uppercase">
-                  {t.reviews.eyebrow}
-                </span>
-              </div>
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl leading-[1.15] tracking-[0.01em] mb-6">
+            <span className="text-[#191D30] block">{headlineTop}</span>
+            <span className="text-[#A18E7E] block">{headlineAccent}</span>
+          </h2>
+        </div>
 
-              {/* Round Navigation Buttons */}
-              <div className="flex items-center gap-3">
+        {/* Booking.com-Style "Guest Mentions" Filter Pills */}
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="font-body text-[11px] tracking-[0.18em] text-[#191D30]/55 uppercase mb-4">
+            {mentionsTitle}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            {mentionTopics.map((topic) => {
+              const isSelected = activeMention === topic.id;
+              return (
                 <button
-                  onClick={handlePrev}
-                  className="w-11 h-11 rounded-full border border-[#191D30]/25 flex items-center justify-center text-[#191D30] hover:bg-[#191D30] hover:text-white transition-colors"
-                  aria-label="Previous Review"
+                  key={topic.id}
+                  type="button"
+                  onClick={() => setActiveMention(topic.id)}
+                  className={`rounded-full px-4 py-2 font-body text-xs inline-flex items-center gap-1.5 border transition-all duration-300 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#191D30] text-white border-[#191D30] shadow-sm'
+                      : 'bg-white text-[#191D30]/80 border-[#191D30]/15 hover:border-[#A18E7E]'
+                  }`}
                 >
-                  <ArrowLeft size={16} />
+                  {isSelected ? (
+                    <Check size={12} className="text-[#A18E7E]" />
+                  ) : (
+                    <Plus size={12} className="text-[#A18E7E]" />
+                  )}
+                  <span>{topic.label}</span>
+                  <span
+                    className={`text-[10px] ml-0.5 ${
+                      isSelected ? 'text-[#A18E7E]' : 'text-[#191D30]/45'
+                    }`}
+                  >
+                    ({topic.count})
+                  </span>
                 </button>
-                <button
-                  onClick={handleNext}
-                  className="w-11 h-11 rounded-full border border-[#191D30]/25 flex items-center justify-center text-[#191D30] hover:bg-[#191D30] hover:text-white transition-colors"
-                  aria-label="Next Review"
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Dual-Row Non-Stopping Marquee — Clicking ANY Square Redirects to Booking.com Reviews */}
+      <div className="relative space-y-6">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-14 sm:w-28 bg-gradient-to-r from-[#FAF9F6] to-transparent z-20" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-14 sm:w-28 bg-gradient-to-l from-[#FAF9F6] to-transparent z-20" />
+
+        {/* Row 1: Moving Left */}
+        <div className="overflow-hidden">
+          <div className="animate-marquee-left gap-6 px-3">
+            {marqueeRow1.map((rev, idx) => {
+              const prop =
+                (typeof getLocalizedProperty === 'function'
+                  ? getLocalizedProperty(rev.propertyId, lang)
+                  : PROPERTIES[rev.propertyId]) || PROPERTIES['villa-leonora'];
+              const targetBookingUrl =
+                prop.reviewsLink || prop.bookingLink || BRAND_ASSETS.bookingReviewsUrl;
+
+              return (
+                <a
+                  key={`r1-${rev.id}-${idx}`}
+                  href={targetBookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group w-[340px] sm:w-[400px] shrink-0 bg-white border border-[#191D30]/10 p-7 shadow-2xs hover:shadow-lg hover:border-[#A18E7E] transition-all duration-300 flex flex-col justify-between cursor-pointer text-left select-none"
                 >
-                  <ArrowRight size={16} />
-                </button>
-              </div>
-            </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="font-display text-4xl leading-none text-[#A18E7E]">
+                        “
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#FAF9F6] border border-[#191D30]/10 px-2.5 py-1 font-body text-[10px] font-semibold text-[#191D30]">
+                        <Star size={10} className="fill-[#A18E7E] text-[#A18E7E]" />
+                        {rev.score} / 10
+                      </span>
+                    </div>
 
-            {/* Large Quote Symbol */}
-            <div className="font-display text-7xl leading-none text-[#191D30] select-none mb-4">
-              “
-            </div>
+                    <p className="font-body font-light text-[13px] leading-[1.8] text-[#191D30]/80 mb-6 line-clamp-4 group-hover:text-[#191D30] transition-colors">
+                      {rev.text}
+                    </p>
+                  </div>
 
-            {/* Vertical Line + Quote Text */}
-            <div className="border-l-2 border-[#A18E7E] pl-6 md:pl-8 py-2 mb-8">
-              <p className="font-body font-light text-lg md:text-2xl text-[#191D30] leading-[1.7] mb-6">
-                {currentReview.text}
-              </p>
+                  <div className="pt-4 border-t border-[#191D30]/10 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#191D30] text-[#A18E7E] font-display text-xs font-semibold flex items-center justify-center shrink-0">
+                        {rev.avatar || rev.guest.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-display text-xs tracking-[0.12em] text-[#191D30] uppercase">
+                          {rev.guest}
+                        </p>
+                        <p className="font-body text-[10px] text-[#191D30]/50 truncate max-w-[180px]">
+                          {rev.country} · {prop.name}
+                        </p>
+                      </div>
+                    </div>
 
-              <div>
-                <p className="font-display text-base tracking-[0.15em] text-[#191D30] uppercase">
-                  {currentReview.guest}
-                </p>
-                <p className="font-body text-[11px] tracking-[0.15em] text-[#191D30]/60 uppercase mt-1">
-                  {currentReview.country} · {currentReview.travelerType}
-                </p>
-              </div>
-            </div>
-
-            {/* Pill Action Row */}
-            <div className="flex flex-wrap items-center gap-4 pt-6 border-t border-[#191D30]/10">
-              <button
-                onClick={() => setShowAllGrid((prev) => !prev)}
-                className="rounded-full px-7 py-3.5 border border-[#191D30] text-[#191D30] font-body text-[10px] tracking-[0.22em] uppercase hover:bg-[#191D30] hover:text-white transition-all duration-500"
-              >
-                {showAllGrid ? t.reviews.showLess : t.reviews.showMore}
-              </button>
-
-              <a
-                href={BRAND_ASSETS.bookingReviewsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full px-7 py-3.5 bg-[#191D30] text-white font-body text-[10px] tracking-[0.22em] uppercase inline-flex items-center gap-2 hover:bg-[#A18E7E] transition-all duration-500"
-              >
-                <span>{t.reviews.openWindow}</span>
-                <ExternalLink size={13} />
-              </a>
-            </div>
+                    <span
+                      title="Open on Booking.com"
+                      className="w-8 h-8 rounded-full bg-[#FAF9F6] group-hover:bg-[#191D30] text-[#191D30] group-hover:text-white flex items-center justify-center transition-colors shrink-0"
+                    >
+                      <ExternalLink size={12} />
+                    </span>
+                  </div>
+                </a>
+              );
+            })}
           </div>
         </div>
 
-        {/* Expandable Full Reviews Grid (Sharp Rectangular Cards) */}
-        {showAllGrid && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12 border-t border-[#191D30]/10 animate-in fade-in duration-500">
-            {BOOKING_REVIEWS.map((review) => (
-              <div
-                key={review.id}
-                className="p-8 bg-[#FAF9F6] border border-[#191D30]/10 rounded-none flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <span className="font-body text-[10px] tracking-[0.2em] text-[#A18E7E] uppercase">
-                      {review.propertyName}
-                    </span>
-                    <span className="inline-flex items-center gap-1 font-body text-xs font-medium text-[#191D30]">
-                      <Star size={12} className="fill-[#A18E7E] text-[#A18E7E]" />
-                      {review.score} / 10
+        {/* Row 2: Moving Right */}
+        <div className="overflow-hidden">
+          <div className="animate-marquee-right gap-6 px-3">
+            {marqueeRow2.map((rev, idx) => {
+              const prop =
+                (typeof getLocalizedProperty === 'function'
+                  ? getLocalizedProperty(rev.propertyId, lang)
+                  : PROPERTIES[rev.propertyId]) || PROPERTIES['villa-leonora'];
+              const targetBookingUrl =
+                prop.reviewsLink || prop.bookingLink || BRAND_ASSETS.bookingReviewsUrl;
+
+              return (
+                <a
+                  key={`r2-${rev.id}-${idx}`}
+                  href={targetBookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group w-[340px] sm:w-[400px] shrink-0 bg-white border border-[#191D30]/10 p-7 shadow-2xs hover:shadow-lg hover:border-[#A18E7E] transition-all duration-300 flex flex-col justify-between cursor-pointer text-left select-none"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="font-display text-4xl leading-none text-[#A18E7E]">
+                        “
+                      </span>
+                      <span className="font-body text-[9.5px] tracking-[0.18em] text-[#A18E7E] uppercase">
+                        {rev.highlight}
+                      </span>
+                    </div>
+
+                    <p className="font-body font-light text-[13px] leading-[1.8] text-[#191D30]/80 mb-6 line-clamp-4 group-hover:text-[#191D30] transition-colors">
+                      {rev.text}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-[#191D30]/10 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#A18E7E]/20 border border-[#A18E7E]/40 text-[#191D30] font-display text-xs font-semibold flex items-center justify-center shrink-0">
+                        {rev.avatar || rev.guest.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-display text-xs tracking-[0.12em] text-[#191D30] uppercase">
+                          {rev.guest}
+                        </p>
+                        <p className="font-body text-[10px] text-[#191D30]/50 truncate max-w-[180px]">
+                          {rev.country} · {prop.name}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span
+                      title="Open on Booking.com"
+                      className="w-8 h-8 rounded-full bg-[#FAF9F6] group-hover:bg-[#191D30] text-[#191D30] group-hover:text-white flex items-center justify-center transition-colors shrink-0"
+                    >
+                      <ArrowUpRight size={13} />
                     </span>
                   </div>
-                  <h4 className="font-display text-sm tracking-[0.12em] text-[#191D30] uppercase mb-3">
-                    “{review.title}”
-                  </h4>
-                  <p className="font-body font-light text-[13px] leading-[1.9] text-[#191D30]/80 mb-6">
-                    {review.text}
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-[#191D30]/10">
-                  <p className="font-display text-xs tracking-[0.15em] text-[#191D30] uppercase">
-                    {review.guest}
-                  </p>
-                  <p className="font-body text-[10px] tracking-[0.12em] text-[#191D30]/55 uppercase mt-0.5">
-                    {review.country} · {review.date}
-                  </p>
-                </div>
-              </div>
-            ))}
+                </a>
+              );
+            })}
           </div>
-        )}
+        </div>
       </div>
     </section>
   );

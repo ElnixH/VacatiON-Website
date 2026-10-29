@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+// src/components/Nav.jsx
+import { useState, useEffect, useRef } from 'react';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { BRAND_ASSETS, useLanguage } from '../data/siteData';
 
@@ -11,42 +12,17 @@ const LANGUAGES = [
 export default function Nav({ scrolled, view = 'home', setView }) {
   const [isOpen, setIsOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [tinosTime, setTinosTime] = useState('');
-  const [temperature, setTemperature] = useState('23°C');
+  const langContainerRef = useRef(null);
   const { lang, setLang, t } = useLanguage();
 
-  // Live Local Time (Europe/Athens)
   useEffect(() => {
-    const updateClock = () => {
-      try {
-        const formatter = new Intl.DateTimeFormat('en-GB', {
-          timeZone: 'Europe/Athens',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        });
-        setTinosTime(formatter.format(new Date()));
-      } catch {
-        setTinosTime('15:00');
+    const handleClickOutside = (e) => {
+      if (langContainerRef.current && !langContainerRef.current.contains(e.target)) {
+        setLangMenuOpen(false);
       }
     };
-    updateClock();
-    const timer = setInterval(updateClock, 20000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Live Temperature Fetch
-  useEffect(() => {
-    fetch(
-      'https://api.open-meteo.com/v1/forecast?latitude=37.5376&longitude=25.1634&current_weather=true'
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.current_weather?.temperature !== undefined) {
-          setTemperature(`${Math.round(data.current_weather.temperature)}°C`);
-        }
-      })
-      .catch(() => {});
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const leftLinks = [
@@ -98,31 +74,24 @@ export default function Nav({ scrolled, view = 'home', setView }) {
   const hasDarkHero = ['home', 'discover-tinos'].includes(view);
   const isSolid = scrolled || isOpen || !hasDarkHero;
 
-  // Solid header when scrolled — removed blurry backdrop
   const headerStyle = `fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
-    isSolid ? 'bg-[#191D30] shadow-2xl py-3' : 'bg-transparent py-5 md:py-6'
+    isSolid ? 'bg-[#191D30] shadow-2xl py-2.5' : 'bg-transparent py-4'
   }`;
 
+  // Slightly smaller nav link typography
   const linkStyle =
-    'group relative text-[11px] font-body font-light tracking-[0.3em] transition-all duration-500 uppercase text-white hover:text-[#A18E7E] py-2 flex items-center justify-center cursor-pointer';
+    'group relative text-[9.5px] lg:text-[10px] font-body font-light tracking-[0.26em] transition-all duration-500 uppercase text-white hover:text-[#A18E7E] py-1.5 flex items-center justify-center cursor-pointer';
+
+  const otherLanguages = LANGUAGES.filter((l) => l.code !== lang);
 
   return (
     <header className={headerStyle}>
-      <div className="w-full px-4 md:px-8 h-12 flex items-center relative">
+      <div className="w-full px-4 md:px-8 h-11 flex items-center relative">
         {/* Desktop Nav */}
         <div className="hidden md:flex w-full items-center justify-between">
-          {/* Left Navigation + Clean Temperature | Time (No Tinos, No Pill Background) */}
-          <div className="flex flex-1 justify-start items-center gap-8 lg:gap-10">
-            <div
-              onClick={goHome}
-              className="hidden xl:flex items-center gap-2 font-body text-[10.5px] font-light tracking-[0.28em] text-white/90 uppercase whitespace-nowrap cursor-pointer select-none"
-            >
-              <span>{temperature}</span>
-              <span className="text-white/35">|</span>
-              <span>{tinosTime}</span>
-            </div>
-
-            <nav className="flex items-center gap-8 lg:gap-10">
+          {/* Left Navigation */}
+          <div className="flex flex-1 justify-start items-center gap-6 lg:gap-8">
+            <nav className="flex items-center gap-6 lg:gap-8">
               {leftLinks.map((link, index) => (
                 <button
                   key={`${link.view}-${index}`}
@@ -131,62 +100,59 @@ export default function Nav({ scrolled, view = 'home', setView }) {
                 >
                   <span className="relative">
                     {link.label}
-                    <span className="absolute -bottom-2 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-300 ease-out group-hover:w-full" />
+                    <span className="absolute -bottom-1.5 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-300 ease-out group-hover:w-full" />
                   </span>
                 </button>
               ))}
             </nav>
           </div>
 
-          {/* Center Logo / Brand (Original Scroll & Hover Animation) */}
+          {/* Center Logo + Slogan (Slogan invisible at top, pops up below logo when scrolled) */}
           <div
-            className="relative flex-shrink-0 cursor-pointer group flex items-center justify-center min-w-[260px] lg:min-w-[300px] h-12"
+            className="relative flex-shrink-0 cursor-pointer group flex flex-col items-center justify-center min-w-[220px] lg:min-w-[260px]"
             onClick={goHome}
           >
             <img
               src={BRAND_ASSETS.logo}
               alt="Logo"
-              className={`h-6 w-auto object-contain transition-all duration-500 absolute brightness-0 invert ${
-                scrolled
-                  ? 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'
-                  : 'opacity-100 scale-100'
+              className={`w-auto object-contain transition-all duration-500 brightness-0 invert ${
+                scrolled ? 'h-4 lg:h-[18px]' : 'h-[18px] lg:h-5'
               }`}
             />
             <span
-              className={`font-display text-[12px] tracking-[0.4em] uppercase transition-all duration-500 text-[#A18E7E] whitespace-nowrap absolute ${
+              className={`font-display text-[7.5px] lg:text-[8px] tracking-[0.34em] uppercase text-[#A18E7E] whitespace-nowrap overflow-hidden transition-all duration-500 ease-out ${
                 scrolled
-                  ? 'opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-105'
-                  : 'opacity-0 pointer-events-none'
+                  ? 'opacity-100 max-h-4 translate-y-0 mt-1'
+                  : 'opacity-0 max-h-0 -translate-y-1 mt-0 pointer-events-none'
               }`}
             >
               {t.nav.tagline}
             </span>
           </div>
 
-          {/* Right Links + Smooth Horizontal Language Selector (No Background) */}
-          <nav className="flex flex-1 justify-end items-center gap-6 lg:gap-9">
+          {/* Right Links + Slower, Silkier Inline Language Drawer */}
+          <nav className="flex flex-1 justify-end items-center gap-5 lg:gap-7">
             {rightLinks.map((link, index) =>
               link.isDropdown ? (
                 <div key={index} className="relative group">
                   <div className={`${linkStyle} flex items-center gap-1`}>
-                    <span className="relative pb-1">
+                    <span className="relative pb-0.5">
                       {link.label}
                       <span className="absolute bottom-0 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-300 ease-out group-hover:w-full" />
                     </span>
                     <ChevronDown
-                      size={12}
+                      size={11}
                       className="text-white/70 group-hover:text-[#A18E7E] transition-transform duration-300 group-hover:rotate-180"
                     />
                   </div>
 
-                  {/* Solid Dropdown Box (No Blur) */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 opacity-0 translate-y-2 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-500 z-50">
-                    <div className="bg-[#191D30] border border-white/10 p-5 flex flex-col gap-4 min-w-[220px] items-center shadow-2xl">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 opacity-0 translate-y-2 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-500 z-50">
+                    <div className="bg-[#191D30] border border-white/10 p-4 flex flex-col gap-3.5 min-w-[200px] items-center shadow-2xl">
                       {link.items.map((subItem) => (
                         <button
                           key={subItem.view}
                           onClick={() => handleNavigation(subItem.view)}
-                          className="text-[10px] font-body tracking-[0.2em] text-white/80 hover:text-[#A18E7E] uppercase text-center transition-colors w-full cursor-pointer"
+                          className="text-[9.5px] font-body tracking-[0.2em] text-white/80 hover:text-[#A18E7E] uppercase text-center transition-colors w-full cursor-pointer"
                         >
                           {subItem.label}
                         </button>
@@ -202,51 +168,60 @@ export default function Nav({ scrolled, view = 'home', setView }) {
                 >
                   <span className="relative">
                     {link.label}
-                    <span className="absolute -bottom-2 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-300 ease-out group-hover:w-full" />
+                    <span className="absolute -bottom-1.5 left-1/2 w-0 h-[1px] bg-[#A18E7E] -translate-x-1/2 transition-all duration-300 ease-out group-hover:w-full" />
                   </span>
                 </button>
               )
             )}
 
-            {/* SMOOTH HORIZONTAL EXPANDING LANGUAGE SELECTOR — ZERO BACKGROUND */}
-            <div className="relative flex items-center border-l border-white/20 pl-4">
+            {/* SILKY SLOW INLINE LANGUAGE DRAWER — ZERO BACKGROUND */}
+            <div
+              ref={langContainerRef}
+              className="relative flex items-center border-l border-white/20 pl-3.5 select-none"
+            >
+              <button
+                type="button"
+                onClick={() => setLangMenuOpen((prev) => !prev)}
+                className="text-[9.5px] lg:text-[10px] font-body font-medium tracking-[0.24em] text-[#A18E7E] hover:text-white uppercase transition-colors duration-500 cursor-pointer bg-transparent border-none p-0"
+                aria-label="Toggle Language Selector"
+              >
+                {lang.toUpperCase()}
+              </button>
+
               <div
-                className={`flex items-center overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  langMenuOpen ? 'max-w-[160px]' : 'max-w-[36px]'
+                className={`grid transition-all duration-[950ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  langMenuOpen
+                    ? 'grid-cols-[1fr] opacity-100 ml-2.5'
+                    : 'grid-cols-[0fr] opacity-0 ml-0 pointer-events-none'
                 }`}
               >
-                {!langMenuOpen ? (
-                  <button
-                    onClick={() => setLangMenuOpen(true)}
-                    className="text-[11px] font-body font-light tracking-[0.25em] text-white hover:text-[#A18E7E] uppercase transition-colors cursor-pointer bg-transparent border-none p-0"
-                    aria-label="Choose Language"
-                  >
-                    {lang.toUpperCase()}
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2.5">
-                    {LANGUAGES.map((l, idx) => (
-                      <div key={l.code} className="flex items-center gap-2.5">
-                        <button
-                          onClick={() => {
-                            setLang(l.code);
-                            setLangMenuOpen(false);
-                          }}
-                          className={`text-[10.5px] font-body tracking-[0.2em] uppercase transition-all duration-300 cursor-pointer bg-transparent border-none p-0 ${
-                            lang === l.code
-                              ? 'text-[#A18E7E] font-medium'
-                              : 'text-white/70 hover:text-white'
-                          }`}
-                        >
-                          {l.label}
-                        </button>
-                        {idx < LANGUAGES.length - 1 && (
-                          <span className="w-[1px] h-2.5 bg-white/20" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="overflow-hidden flex items-center gap-2.5">
+                  {otherLanguages.map((l, idx) => (
+                    <div
+                      key={l.code}
+                      style={{
+                        transitionDelay: langMenuOpen ? `${(idx + 1) * 95}ms` : '0ms',
+                      }}
+                      className={`flex items-center gap-2.5 transition-all duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                        langMenuOpen
+                          ? 'opacity-100 translate-x-0'
+                          : 'opacity-0 -translate-x-3'
+                      }`}
+                    >
+                      <span className="w-[1px] h-2 bg-white/25" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLang(l.code);
+                          setLangMenuOpen(false);
+                        }}
+                        className="text-[9.5px] font-body font-light tracking-[0.2em] uppercase text-white/75 hover:text-[#A18E7E] transition-colors duration-500 cursor-pointer bg-transparent border-none p-0 whitespace-nowrap"
+                      >
+                        {l.label}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </nav>
@@ -254,56 +229,69 @@ export default function Nav({ scrolled, view = 'home', setView }) {
 
         {/* Mobile Nav Toggle Top Bar */}
         <div className="flex md:hidden w-full items-center justify-between relative">
-          {/* Mobile Language Selector (No Background) */}
-          <div className="flex items-center gap-2 z-20">
+          {/* Mobile Smooth Language Selector */}
+          <div className="flex items-center z-20 select-none">
+            <button
+              type="button"
+              onClick={() => setLangMenuOpen((prev) => !prev)}
+              className="text-[9.5px] font-body font-medium tracking-[0.22em] text-[#A18E7E] uppercase bg-transparent border-none p-0"
+            >
+              {lang.toUpperCase()}
+            </button>
             <div
-              className={`flex items-center overflow-hidden transition-all duration-500 ease-out ${
-                langMenuOpen ? 'max-w-[130px]' : 'max-w-[34px]'
+              className={`grid transition-all duration-[950ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                langMenuOpen
+                  ? 'grid-cols-[1fr] opacity-100 ml-2'
+                  : 'grid-cols-[0fr] opacity-0 ml-0 pointer-events-none'
               }`}
             >
-              {!langMenuOpen ? (
-                <button
-                  onClick={() => setLangMenuOpen(true)}
-                  className="text-[10px] font-body tracking-[0.25em] text-white uppercase bg-transparent border-none p-0"
-                >
-                  {lang.toUpperCase()}
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  {LANGUAGES.map((l) => (
+              <div className="overflow-hidden flex items-center gap-2">
+                {otherLanguages.map((l, idx) => (
+                  <div
+                    key={l.code}
+                    style={{
+                      transitionDelay: langMenuOpen ? `${(idx + 1) * 95}ms` : '0ms',
+                    }}
+                    className={`flex items-center gap-2 transition-all duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      langMenuOpen
+                        ? 'opacity-100 translate-x-0'
+                        : 'opacity-0 -translate-x-2'
+                    }`}
+                  >
+                    <span className="w-[1px] h-2 bg-white/25" />
                     <button
-                      key={l.code}
+                      type="button"
                       onClick={() => {
                         setLang(l.code);
                         setLangMenuOpen(false);
                       }}
-                      className={`text-[10px] font-body tracking-[0.18em] uppercase bg-transparent border-none p-0 ${
-                        lang === l.code ? 'text-[#A18E7E] font-medium' : 'text-white/70'
-                      }`}
+                      className="text-[9.5px] font-body tracking-[0.18em] uppercase text-white/75 bg-transparent border-none p-0"
                     >
                       {l.label}
                     </button>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Logo / Brand (Mobile Top Bar) */}
+          {/* Mobile Center Logo + Slogan (Slogan pops up below logo only on scroll) */}
           <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer flex items-center justify-center min-w-[140px] h-7"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer flex flex-col items-center justify-center min-w-[130px]"
             onClick={goHome}
           >
             <img
               src={BRAND_ASSETS.logo}
               alt="Logo"
-              className={`h-5 w-auto object-contain transition-all duration-500 absolute brightness-0 invert ${
-                scrolled ? 'opacity-0 scale-90' : 'opacity-100 scale-100'
+              className={`w-auto object-contain transition-all duration-500 brightness-0 invert ${
+                scrolled ? 'h-3.5' : 'h-4'
               }`}
             />
             <span
-              className={`font-display text-[9px] tracking-[0.3em] uppercase transition-all duration-500 text-[#A18E7E] whitespace-nowrap absolute ${
-                scrolled ? 'opacity-100 scale-100' : 'opacity-0 pointer-events-none'
+              className={`font-display text-[6.5px] tracking-[0.26em] uppercase text-[#A18E7E] whitespace-nowrap overflow-hidden transition-all duration-500 ease-out ${
+                scrolled
+                  ? 'opacity-100 max-h-3 translate-y-0 mt-0.5'
+                  : 'opacity-0 max-h-0 -translate-y-1 mt-0 pointer-events-none'
               }`}
             >
               {t.nav.tagline}
@@ -314,10 +302,10 @@ export default function Nav({ scrolled, view = 'home', setView }) {
           <div className="ml-auto z-20">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-white p-2"
+              className="text-white p-1.5"
               aria-label="Toggle Menu"
             >
-              {isOpen ? <X size={24} strokeWidth={1} /> : <Menu size={24} strokeWidth={1} />}
+              {isOpen ? <X size={21} strokeWidth={1} /> : <Menu size={21} strokeWidth={1} />}
             </button>
           </div>
         </div>
@@ -330,18 +318,18 @@ export default function Nav({ scrolled, view = 'home', setView }) {
         }`}
       >
         <div className="flex justify-between items-center h-20 border-b border-white/10 mb-8">
-          <div className="flex items-center gap-3" onClick={goHome}>
+          <div className="flex flex-col items-start cursor-pointer" onClick={goHome}>
             <img
               src={BRAND_ASSETS.logo}
               alt="Logo"
-              className="h-5 w-auto brightness-0 invert cursor-pointer"
+              className="h-4 w-auto brightness-0 invert"
             />
-            <span className="text-[10px] font-body tracking-[0.22em] text-white/80 uppercase border-l border-white/15 pl-3">
-              {temperature} <span className="text-white/35">|</span> {tinosTime}
+            <span className="font-display text-[7.5px] tracking-[0.26em] uppercase text-[#A18E7E] mt-1">
+              {t.nav.tagline}
             </span>
           </div>
           <button onClick={() => setIsOpen(false)} className="text-white p-2">
-            <X size={28} strokeWidth={1} />
+            <X size={24} strokeWidth={1} />
           </button>
         </div>
 
@@ -351,7 +339,7 @@ export default function Nav({ scrolled, view = 'home', setView }) {
               <button
                 key={l.code}
                 onClick={() => setLang(l.code)}
-                className={`text-xs font-body tracking-[0.25em] uppercase pb-1 border-b transition-all ${
+                className={`text-xs font-body tracking-[0.25em] uppercase pb-1 border-b transition-all duration-500 ${
                   lang === l.code
                     ? 'text-[#A18E7E] border-[#A18E7E]'
                     : 'text-white/50 border-transparent'
