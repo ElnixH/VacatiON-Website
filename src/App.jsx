@@ -19,6 +19,7 @@ import MediaHub from './components/MediaHub';
 import EarlyBirdPopup from './components/EarlyBirdPopup';
 import Reservation from './components/Reservation';
 import S7AdminPortal from './components/S7AdminPortal';
+import OwnerFinancialReport from './components/OwnerFinancialReport';
 
 const VALID_VIEWS = [
   'cookies',
